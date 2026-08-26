@@ -1,0 +1,36 @@
+version: "3.8"
+
+services:
+  clawforge:
+    build: .
+    container_name: clawforge
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - CLAW_EARN_WALLET=${CLAW_EARN_WALLET}
+      - CLAW_EARN_PRIVATE_KEY=${CLAW_EARN_PRIVATE_KEY}
+      - CLAW_EARN_BASE_URL=${CLAW_EARN_BASE_URL:-https://aiagentstore.ai}
+      - MEMORY_PATH=${MEMORY_PATH:-./data/memory}
+      - AUDIT_PATH=${AUDIT_PATH:-./data/audit}
+      - ECONOMY_PATH=${ECONOMY_PATH:-./data/economy}
+      - SENTINEL_HEARTBEAT_INTERVAL=${SENTINEL_HEARTBEAT_INTERVAL:-60}
+      - SENTINEL_FRESHNESS_THRESHOLD=${SENTINEL_FRESHNESS_THRESHOLD:-90}
+      - SENTINEL_DEAD_MAN_SWITCH=${SENTINEL_DEAD_MAN_SWITCH:-300}
+      - AUTO_STAKE_PERCENTAGE=${AUTO_STAKE_PERCENTAGE:-0.10}
+      - MAX_GAS_FEE_WEI=${MAX_GAS_FEE_WEI:-50000000000000000}
+      - MAX_DAILY_STAKE_USDC=${MAX_DAILY_STAKE_USDC:-1000.0}
+      - VAULT_KEY=${VAULT_KEY}
+      - API_KEY=${API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+    volumes:
+      - clawforge-data:/app/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/v1/health').raise_for_status()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  clawforge-data:

@@ -1,0 +1,149 @@
+{
+  "version": "1.0",
+  "last_updated": "2026-08-26",
+  "entries": [
+    {
+      "id": "sem-001",
+      "type": "semantic",
+      "summary": "Use atomic writes (temp+rename) for all file-based storage to prevent corruption under concurrent access",
+      "tags": ["architecture", "file-storage", "concurrency", "fastapi"],
+      "source": "implementation",
+      "score": 0.85,
+      "project": "clawforge",
+      "created_at": "2026-08-26",
+      "line_ref": "semantic.md:5"
+    },
+    {
+      "id": "sem-002",
+      "type": "semantic",
+      "summary": "Use AsyncIOScheduler for APScheduler in async FastAPI contexts to avoid false Dead Man's Switch triggers",
+      "tags": ["architecture", "async", "scheduler", "fastapi"],
+      "source": "implementation",
+      "score": 0.80,
+      "project": "clawforge",
+      "created_at": "2026-08-26",
+      "line_ref": "semantic.md:8"
+    },
+    {
+      "id": "sem-003",
+      "type": "semantic",
+      "summary": "HTTPS Trust Boundary must intercept HTTP redirect chains, not just validate initial URLs",
+      "tags": ["security", "trust-boundary", "https"],
+      "source": "implementation",
+      "score": 0.90,
+      "project": "clawforge",
+      "created_at": "2026-08-26",
+      "line_ref": "semantic.md:11"
+    },
+    {
+      "id": "sem-004",
+      "type": "semantic",
+      "summary": "Implement API authentication (API key/JWT) and rate limiting for production FastAPI deployments",
+      "tags": ["security", "authentication", "rate-limiting", "fastapi"],
+      "source": "sast",
+      "score": 0.95,
+      "project": "clawforge",
+      "created_at": "2026-08-26",
+      "line_ref": "semantic.md:14"
+    },
+    {
+      "id": "sem-005",
+      "type": "semantic",
+      "summary": "Hash-chained audit logs are fragile - validate chain integrity at each entry insertion",
+      "tags": ["architecture", "audit", "hash-chain"],
+      "source": "implementation",
+      "score": 0.85,
+      "project": "clawforge",
+      "created_at": "2026-08-26",
+      "line_ref": "semantic.md:17"
+    },
+    {
+      "id": "epi-001",
+      "type": "episodic",
+      "summary": "TOCTOU Race Condition: Ledger read-then-write allows data loss. Fix: Use file locking (fcntl.flock or filelock library) for concurrent access.",
+      "tags": ["bug", "fix", "concurrency", "file-storage"],
+      "source": "sast",
+      "score": 0.82,
+      "project": "clawforge",
+      "created_at": "2026-08-26",
+      "line_ref": "episodic.md:5"
+    },
+    {
+      "id": "epi-002",
+      "type": "episodic",
+      "summary": "Subdomain Spoofing: endswith(ALLOWED_HOST) matches evil-aiagentstore.ai. Fix: Use hostname == ALLOWED_HOST or hostname.endswith(f'.{ALLOWED_HOST}').",
+      "tags": ["bug", "fix", "security", "trust-boundary"],
+      "source": "sast",
+      "score": 0.88,
+      "project": "clawforge",
+      "created_at": "2026-08-26",
+      "line_ref": "episodic.md:10"
+    },
+    {
+      "id": "epi-003",
+      "type": "episodic",
+      "summary": "Ineffective Memory Zeroization: decrypted = '0' * len(decrypted) fails because Python strings are immutable. Fix: Use bytearray + explicit overwrite or ctypes.memset.",
+      "tags": ["bug", "fix", "security", "cryptography"],
+      "source": "sast",
+      "score": 0.80,
+      "project": "clawforge",
+      "created_at": "2026-08-26",
+      "line_ref": "episodic.md:15"
+    },
+    {
+      "id": "epi-004",
+      "type": "episodic",
+      "summary": "Dead Code Bug: limit_path.with_suffix('.tmp') if False else ... - leftover ternary. Fix: Remove the ternary condition.",
+      "tags": ["bug", "fix", "code-quality"],
+      "source": "sast",
+      "score": 0.70,
+      "project": "clawforge",
+      "created_at": "2026-08-26",
+      "line_ref": "episodic.md:20"
+    },
+    {
+      "id": "ant-001",
+      "type": "anti-pattern",
+      "summary": "Don't print wallet addresses or secrets to stdout in production - use structured logging with debug flags",
+      "tags": ["anti-pattern", "warning", "security", "logging"],
+      "source": "sast",
+      "score": 0.75,
+      "project": "clawforge",
+      "created_at": "2026-08-26",
+      "line_ref": "anti_patterns.md:5"
+    },
+    {
+      "id": "ant-002",
+      "type": "anti-pattern",
+      "summary": "Don't expose internal error details in exception messages - sanitize before passing to callers",
+      "tags": ["anti-pattern", "warning", "security", "error-handling"],
+      "source": "sast",
+      "score": 0.78,
+      "project": "clawforge",
+      "created_at": "2026-08-26",
+      "line_ref": "anti_patterns.md:8"
+    },
+    {
+      "id": "ant-003",
+      "type": "anti-pattern",
+      "summary": "Don't use endswith() for hostname validation without exact match - allows subdomain spoofing",
+      "tags": ["anti-pattern", "warning", "security", "trust-boundary"],
+      "source": "sast",
+      "score": 0.85,
+      "project": "clawforge",
+      "created_at": "2026-08-26",
+      "line_ref": "anti_patterns.md:11"
+    },
+    {
+      "id": "ant-004",
+      "type": "anti-pattern",
+      "summary": "Don't define duplicate Pydantic models - consolidate to avoid import confusion and schema drift",
+      "tags": ["anti-pattern", "warning", "code-quality", "pydantic"],
+      "source": "sast",
+      "score": 0.65,
+      "project": "clawforge",
+      "created_at": "2026-08-26",
+      "line_ref": "anti_patterns.md:14"
+    }
+  ]
+}
