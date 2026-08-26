@@ -17,7 +17,7 @@ from clawforge.main import app
 def client():
     with tempfile.TemporaryDirectory() as tmpdir:
         tp = Path(tmpdir)
-        with patch("clawforge.config.get_settings") as mock_settings:
+        with patch("clawforge.api.routes.get_settings") as mock_settings:
             mock_s = MagicMock()
             mock_s.ECONOMY_PATH = str(tp / "economy")
             mock_s.AUDIT_PATH = str(tp / "audit")
