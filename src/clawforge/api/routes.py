@@ -18,6 +18,8 @@ from ..economy.reputation import ReputationTracker
 from ..memory.hot import HotMemory
 from ..sentinel.watcher import sentinel
 from ..protocol.trust import trust_boundary
+from ..events.bus import event_bus, Event
+from ..execution.executor import WorkExecutor
 
 router = APIRouter(prefix="/v1", tags=["clawforge"])
 
@@ -227,3 +229,168 @@ async def reject_trust_request(index: int):
     if not success:
         raise HTTPException(status_code=404, detail="Request not found or already processed")
     return {"index": index, "status": "rejected"}
+
+
+# --- Task Execution ---
+
+
+@router.post("/tasks/{task_id}/execute")
+async def execute_task(task_id: str):
+    """Execute a task using the AI agent executor.
+
+    Dispatches to the appropriate agent type (sales, kyc, ecommerce, general)
+    based on the task type. Requires OPENAI_API_KEY for real execution,
+    falls back to stub output otherwise.
+    """
+    executor = WorkExecutor(timeout=300.0)
+    task = Task(
+        id=task_id,
+        title=f"Task {task_id}",
+        description="Execute task via API",
+        value_usdc=0.0,
+        type="general",
+        created_at=time.time(),
+    )
+    result = await executor.execute(task)
+
+    await event_bus.publish(Event(
+        type="task_executed",
+        task_id=task_id,
+        data={
+            "success": result.success,
+            "execution_time": result.execution_time,
+            "agent_type": result.agent_type.value,
+        },
+    ))
+
+    return {
+        "task_id": task_id,
+        "success": result.success,
+        "output": result.output,
+        "execution_time": result.execution_time,
+        "agent_type": result.agent_type.value,
+        "error": result.error,
+    }
+
+
+# --- On-Chain Settlement ---
+
+
+@router.post("/settlement/{task_id}/submit")
+async def submit_settlement(task_id: str, to_address: str, amount_usdc: float):
+    """Submit an on-chain USDC settlement for a task.
+
+    Creates a settlement record and queues it for broadcast on Base chain.
+    """
+    from ..settlement.onchain import create_settler, SettlementQueue
+    from pathlib import Path
+
+    settler = create_settler()
+    settlement = settler.create_settlement(task_id, to_address, amount_usdc)
+
+    queue = SettlementQueue(Path("./data/settlement"))
+    queue.enqueue(settlement)
+
+    await event_bus.publish(Event(
+        type="settlement_submitted",
+        task_id=task_id,
+        data={"to_address": to_address, "amount_usdc": amount_usdc},
+    ))
+
+    return {
+        "task_id": task_id,
+        "status": "queued",
+        "from_address": settlement.from_address,
+        "to_address": to_address,
+        "amount_usdc": amount_usdc,
+    }
+
+
+@router.get("/settlement/{task_id}/status")
+async def get_settlement_status(task_id: str):
+    """Get settlement status for a task."""
+    from ..settlement.onchain import SettlementQueue
+    from pathlib import Path
+
+    queue = SettlementQueue(Path("./data/settlement"))
+    pending = queue.get_pending()
+    for s in pending:
+        if s.task_id == task_id:
+            return s.model_dump()
+
+    raise HTTPException(status_code=404, detail="Settlement not found")
+
+
+# --- Agent Execution with Event Broadcasting ---
+
+
+@router.post("/tasks/{task_id}/full-lifecycle")
+async def full_task_lifecycle(task_id: str, bid_amount: float, to_address: str):
+    """Execute a full task lifecycle: bid -> execute -> settle.
+
+    Bids on a task, executes it via AI, generates proof, and queues settlement.
+    """
+    # 1. Bid
+    rep = _get_reputation()
+    staker = _get_staker()
+    stake = staker.stake_for_task(task_id, bid_amount)
+
+    await event_bus.publish(Event(
+        type="task_bid",
+        task_id=task_id,
+        data={"bid_amount": bid_amount, "stake": stake},
+    ))
+
+    # 2. Execute
+    executor = WorkExecutor(timeout=300.0)
+    task = Task(
+        id=task_id,
+        title=f"Task {task_id}",
+        description="Full lifecycle execution",
+        value_usdc=bid_amount,
+        type="general",
+        created_at=time.time(),
+    )
+    result = await executor.execute(task)
+
+    await event_bus.publish(Event(
+        type="task_completed",
+        task_id=task_id,
+        data={"success": result.success, "output": result.output[:200]},
+    ))
+
+    # 3. Settle
+    from ..settlement.onchain import create_settler, SettlementQueue
+    from pathlib import Path
+
+    settler = create_settler()
+    settlement = settler.create_settlement(task_id, to_address, bid_amount)
+    queue = SettlementQueue(Path("./data/settlement"))
+    queue.enqueue(settlement)
+
+    # 4. Record in ledger
+    ledger = _get_ledger()
+    ledger.append(task_id, bid_amount, "credit", "Task completed")
+    reclaimed = staker.execute_rate_and_claim(task_id)
+
+    await event_bus.publish(Event(
+        type="settlement_submitted",
+        task_id=task_id,
+        data={"amount": bid_amount, "to": to_address},
+    ))
+
+    return {
+        "task_id": task_id,
+        "bid": {"amount": bid_amount, "stake": stake},
+        "execution": {
+            "success": result.success,
+            "output": result.output,
+            "agent_type": result.agent_type.value,
+        },
+        "settlement": {
+            "status": "queued",
+            "to_address": to_address,
+            "amount_usdc": bid_amount,
+        },
+        "ledger": {"reclaimed": reclaimed},
+    }

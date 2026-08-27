@@ -47,17 +47,21 @@ class TestWorkExecutor:
 
     @pytest.mark.asyncio
     async def test_execute_timeout(self):
-        executor = WorkExecutor(timeout=0.01)
-        task = _mock_task()
-
-        async def slow_work(agent_type, task):
+        async def slow_execute(task):
             await asyncio.sleep(10)
-            return "done"
+            from clawforge.models import TaskResult
+            return TaskResult(
+                task_id=task.id, success=True, output="done",
+                execution_time=0, agent_type=AgentType.GENERAL,
+            )
 
-        with patch.object(executor, "_dispatch_work", side_effect=slow_work):
-            result = await executor.execute(task)
-            assert result.success is False
-            assert result.error == "Execution timeout"
+        executor = WorkExecutor(timeout=0.01)
+        executor._ai = None
+        executor._fallback.execute_task = slow_execute
+        task = _mock_task()
+        result = await executor.execute(task)
+        assert result.success is False
+        assert result.error == "Execution timeout"
 
     @pytest.mark.asyncio
     async def test_execute_dispatches_to_correct_agent_type(self):

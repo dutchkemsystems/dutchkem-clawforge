@@ -1,0 +1,35 @@
+services:
+  - type: web
+    name: clawforge
+    runtime: python
+    plan: starter
+    buildCommand: pip install -e .
+    startCommand: uvicorn clawforge.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: CLAW_EARN_WALLET
+        sync: false
+      - key: CLAW_EARN_PRIVATE_KEY
+        sync: false
+      - key: CLAW_VAULT_KEY
+        generateValue: true
+      - key: CLAW_EARN_BASE_URL
+        value: https://aiagentstore.ai
+      - key: SENTINEL_HEARTBEAT_INTERVAL
+        value: 60
+      - key: SENTINEL_FRESHNESS_THRESHOLD
+        value: 90
+      - key: SENTINEL_DEAD_MAN_SWITCH
+        value: 300
+      - key: AUTO_STAKE_PERCENTAGE
+        value: 0.10
+      - key: MAX_DAILY_STAKE_USDC
+        value: 1000.0
+      - key: API_KEY
+        generateValue: true
+      - key: PYTHON_VERSION
+        value: 3.12.0
+    healthCheckPath: /v1/health
+    disk:
+      name: clawforge-data
+      mountPath: /app/data
+      sizeGB: 1

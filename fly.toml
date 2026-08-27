@@ -1,0 +1,33 @@
+app = "dutchkem-clawforge"
+primary_region = "iad"
+
+[build]
+
+[env]
+  CLAW_EARN_BASE_URL = "https://aiagentstore.ai"
+  SENTINEL_HEARTBEAT_INTERVAL = "60"
+  SENTINEL_FRESHNESS_THRESHOLD = "90"
+  SENTINEL_DEAD_MAN_SWITCH = "300"
+  AUTO_STAKE_PERCENTAGE = "0.10"
+  MAX_DAILY_STAKE_USDC = "1000.0"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [http_service.concurrency]
+    type = "connections"
+    hard_limit = 25
+    soft_limit = 20
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 256
+
+[mounts]
+  source = "clawforge_data"
+  destination = "/app/data"

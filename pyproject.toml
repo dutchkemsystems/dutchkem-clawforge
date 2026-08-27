@@ -47,4 +47,3 @@ warn_unused_configs = true
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
-collect_ignore = ["test_smoke.py"]
