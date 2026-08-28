@@ -1,7 +1,6 @@
-import time
 
-from ..models import Task, Bid
 from ..economy.reputation import ReputationTracker
+from ..models import Task
 
 
 class SmartBidder:

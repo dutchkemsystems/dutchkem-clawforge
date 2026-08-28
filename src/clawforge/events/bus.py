@@ -1,11 +1,9 @@
 """WebSocket event system for real-time task updates."""
 
-import asyncio
-import json
 import time
-from typing import Any, Optional
+from typing import Any
 
-from fastapi import WebSocket, WebSocketDisconnect
+from fastapi import WebSocket
 from pydantic import BaseModel, Field
 
 

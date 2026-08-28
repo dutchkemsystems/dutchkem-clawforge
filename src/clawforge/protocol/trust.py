@@ -1,7 +1,6 @@
 """Module 0.1: HTTPS Trust Boundary - Enforce secure external connections."""
 
 import time
-from typing import Optional
 from urllib.parse import urlparse
 
 import httpx

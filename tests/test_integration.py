@@ -1,25 +1,25 @@
-import os
 import asyncio
 import json
-import time
-import pytest
+import os
 import tempfile
+import time
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock
+
+import pytest
 
 os.environ.setdefault("CLAW_EARN_WALLET", "0x0000000000000000000000000000000000000000")
 os.environ.setdefault("CLAW_EARN_PRIVATE_KEY", "0x" + "1" * 64)
 
-from clawforge.models import Task, AgentType
-from clawforge.economy.ledger import USDCLedger
-from clawforge.economy.staker import AutoStaker
-from clawforge.economy.reputation import ReputationTracker
-from clawforge.execution.executor import WorkExecutor
-from clawforge.execution.proof import ProofGenerator
 from clawforge.audit.logger import HashChainLogger
 from clawforge.audit.settlement import SettlementGenerator
+from clawforge.economy.ledger import USDCLedger
+from clawforge.economy.reputation import ReputationTracker
+from clawforge.economy.staker import AutoStaker
+from clawforge.execution.executor import WorkExecutor
+from clawforge.execution.proof import ProofGenerator
+from clawforge.models import Task
 from clawforge.tasks.bidder import SmartBidder
-from clawforge.protocol.trust import TrustBoundary
 
 
 def _make_task(task_id="task-1", value=50.0):
@@ -166,8 +166,9 @@ class TestReputationEconomyFlow:
 class TestSecuritySigning:
     def test_sign_and_verify_roundtrip(self):
         test_key = "0x" + "1" * 64
-        from clawforge.crypto.signer import Signer
         from eth_account import Account
+
+        from clawforge.crypto.signer import Signer
         account = Account.from_key(test_key)
         signer = Signer(test_key, account.address)
 
@@ -176,8 +177,9 @@ class TestSecuritySigning:
 
     def test_verify_wrong_message_fails(self):
         test_key = "0x" + "1" * 64
-        from clawforge.crypto.signer import Signer
         from eth_account import Account
+
+        from clawforge.crypto.signer import Signer
         account = Account.from_key(test_key)
         signer = Signer(test_key, account.address)
 
@@ -186,8 +188,9 @@ class TestSecuritySigning:
 
     def test_sign_bid_and_proof(self):
         test_key = "0x" + "1" * 64
-        from clawforge.crypto.signer import Signer
         from eth_account import Account
+
+        from clawforge.crypto.signer import Signer
         account = Account.from_key(test_key)
         signer = Signer(test_key, account.address)
 

@@ -2,28 +2,23 @@
 
 import re
 import time
-from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
-from fastapi.responses import JSONResponse
 
+from ..audit.logger import HashChainLogger
 from ..config import get_settings
+from ..economy.ledger import USDCLedger
+from ..economy.reputation import ReputationTracker
+from ..economy.staker import AutoStaker
+from ..errors import NotFoundError, ValidationError
+from ..events.bus import Event, event_bus
+from ..execution.executor import WorkExecutor
+from ..memory.hot import HotMemory
 from ..models import (
-    AuditEntry,
-    LedgerEntry,
-    SettlementStatement,
     Task,
 )
-from ..economy.ledger import USDCLedger
-from ..economy.staker import AutoStaker
-from ..economy.reputation import ReputationTracker
-from ..memory.hot import HotMemory
-from ..sentinel.watcher import sentinel
 from ..protocol.trust import trust_boundary
-from ..events.bus import event_bus, Event
-from ..execution.executor import WorkExecutor
-from ..audit.logger import HashChainLogger
-from ..errors import ValidationError, NotFoundError, ClawforgeError
+from ..sentinel.watcher import sentinel
 
 router = APIRouter(prefix="/v1", tags=["clawforge"])
 
@@ -32,11 +27,11 @@ _TASK_ID_PATTERN = re.compile(r"^[a-zA-Z0-9_-]{1,128}$")
 _ADDRESS_PATTERN = re.compile(r"^0x[0-9a-fA-F]{40}$")
 
 # Lazy-loaded singletons
-_ledger: Optional[USDCLedger] = None
-_staker: Optional[AutoStaker] = None
-_reputation: Optional[ReputationTracker] = None
-_hot: Optional[HotMemory] = None
-_audit_logger: Optional[HashChainLogger] = None
+_ledger: USDCLedger | None = None
+_staker: AutoStaker | None = None
+_reputation: ReputationTracker | None = None
+_hot: HotMemory | None = None
+_audit_logger: HashChainLogger | None = None
 
 
 def _get_ledger() -> USDCLedger:
@@ -170,7 +165,7 @@ async def reclaim_stake(task_id: str):
 
 
 @router.get("/ledger")
-async def get_ledger(task_id: Optional[str] = None, since: Optional[float] = None):
+async def get_ledger(task_id: str | None = None, since: float | None = None):
     """Get ledger entries."""
     ledger = _get_ledger()
     entries = ledger.get_entries(task_id=task_id, since=since)
@@ -341,8 +336,9 @@ async def submit_settlement(task_id: str, to_address: str, amount_usdc: float):
         raise ValidationError("Invalid Ethereum address format", field="to_address")
     if amount_usdc <= 0 or amount_usdc > 100000:
         raise ValidationError("Amount must be between 0 and 100000 USDC", field="amount_usdc")
-    from ..settlement.onchain import create_settler, SettlementQueue
     from pathlib import Path
+
+    from ..settlement.onchain import SettlementQueue, create_settler
 
     settler = create_settler()
     settlement = settler.create_settlement(task_id, to_address, amount_usdc)
@@ -370,8 +366,9 @@ async def get_settlement_status(task_id: str):
     """Get settlement status for a task."""
     if not _TASK_ID_PATTERN.match(task_id):
         raise ValidationError("Invalid task_id format", field="task_id")
-    from ..settlement.onchain import SettlementQueue
     from pathlib import Path
+
+    from ..settlement.onchain import SettlementQueue
 
     queue = SettlementQueue(Path("./data/settlement"))
     pending = queue.get_pending()
@@ -427,8 +424,9 @@ async def full_task_lifecycle(task_id: str, bid_amount: float, to_address: str):
     ))
 
     # 3. Settle
-    from ..settlement.onchain import create_settler, SettlementQueue
     from pathlib import Path
+
+    from ..settlement.onchain import SettlementQueue, create_settler
 
     settler = create_settler()
     settlement = settler.create_settlement(task_id, to_address, bid_amount)

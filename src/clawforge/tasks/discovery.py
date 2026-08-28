@@ -1,7 +1,7 @@
-import httpx
-from typing import Optional
 
-from ..models import Task, TaskFilter
+import httpx
+
+from ..models import Task
 from ..protocol.trust import TrustBoundary
 
 
@@ -19,7 +19,7 @@ class TaskDiscovery:
         data = resp.json()
         return [Task(**t) for t in data.get("tasks", [])]
 
-    async def get_task(self, task_id: str) -> Optional[Task]:
+    async def get_task(self, task_id: str) -> Task | None:
         url = f"{self.base_url}/claw/tasks/{task_id}"
         self.trust.validate_url(url)
         resp = await self._client.get(url)

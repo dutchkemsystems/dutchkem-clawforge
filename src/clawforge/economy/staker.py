@@ -1,10 +1,9 @@
 import json
 import time
-from pathlib import Path
 
-from .ledger import USDCLedger
 from ..models import StakeRecord
 from ..utils.filelock import file_lock, locked_file
+from .ledger import USDCLedger
 
 
 class AutoStaker:

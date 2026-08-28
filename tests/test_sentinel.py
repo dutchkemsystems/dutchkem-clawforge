@@ -1,19 +1,21 @@
 import json
 import os
-import time
-import pytest
 import tempfile
+import time
 from pathlib import Path
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 os.environ.setdefault("CLAW_EARN_WALLET", "0x0000000000000000000000000000000000000000")
 os.environ.setdefault("CLAW_EARN_PRIVATE_KEY", "0x" + "1" * 64)
 
 from clawforge.config import get_settings
+
 get_settings.cache_clear()
 
-from clawforge.sentinel.watcher import Sentinel
 from clawforge.models import Heartbeat, SentinelState
+from clawforge.sentinel.watcher import Sentinel
 
 
 class TestSentinelInit:

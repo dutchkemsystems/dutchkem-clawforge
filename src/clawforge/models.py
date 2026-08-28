@@ -1,8 +1,7 @@
 """All Pydantic data models for the Clawforge framework."""
 
-from datetime import datetime
 from enum import Enum
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -45,7 +44,7 @@ class Task(BaseModel):
     status: str = "FUNDED"
     type: str = "general"
     created_at: float = 0.0
-    deadline: Optional[float] = None
+    deadline: float | None = None
     required_skills: list[str] = Field(default_factory=list)
     proof_type: Literal["sha256", "keccak256"] = "sha256"
 
@@ -88,7 +87,7 @@ class StakeRecord(BaseModel):
     amount: float
     staked_at: float
     status: str = "staked"
-    reclaimed_at: Optional[float] = None
+    reclaimed_at: float | None = None
 
 
 class ReputationProfile(BaseModel):
@@ -105,8 +104,8 @@ class TaskFilter(BaseModel):
     """Filter criteria for task discovery."""
 
     status: str = "FUNDED"
-    min_value: Optional[float] = None
-    max_value: Optional[float] = None
+    min_value: float | None = None
+    max_value: float | None = None
     required_skills: list[str] = Field(default_factory=list)
 
 
@@ -126,7 +125,7 @@ class TaskResult(BaseModel):
     success: bool
     output: str
     execution_time: float
-    error: Optional[str] = None
+    error: str | None = None
     agent_type: AgentType = AgentType.GENERAL
 
 
@@ -237,9 +236,9 @@ class ApprovalRequest(BaseModel):
 class SentinelState(BaseModel):
     """Sentinel operational state."""
 
-    heartbeat: Optional[Heartbeat] = None
+    heartbeat: Heartbeat | None = None
     restart_count: int = 0
-    last_restart: Optional[float] = None
+    last_restart: float | None = None
     dead_mans_switch_active: bool = False
 
 

@@ -1,8 +1,7 @@
-import json
 import hashlib
+import json
 import time
 from pathlib import Path
-from typing import Optional
 
 from ..models import LedgerEntry
 from ..utils.filelock import file_lock, locked_file
@@ -57,7 +56,7 @@ class USDCLedger:
 
             return entry
 
-    def get_entries(self, task_id: Optional[str] = None, since: Optional[float] = None) -> list[LedgerEntry]:
+    def get_entries(self, task_id: str | None = None, since: float | None = None) -> list[LedgerEntry]:
         entries = []
         if not self._ledger_file.exists():
             return entries

@@ -6,14 +6,12 @@ import time
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
-
 os.environ.setdefault("CLAW_EARN_WALLET", "0x0000000000000000000000000000000000000000")
 os.environ.setdefault("CLAW_EARN_PRIVATE_KEY", "0x" + "1" * 64)
 
+from clawforge.memory.cold import ColdMemory
 from clawforge.memory.hot import HotMemory
 from clawforge.memory.warm import WarmMemory
-from clawforge.memory.cold import ColdMemory
 from clawforge.models import MemoryEntry
 
 

@@ -3,12 +3,10 @@
 import json
 import os
 import time
-from pathlib import Path
-from typing import Optional
 
+import structlog
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
-import structlog
 
 from clawforge.config import get_settings
 from clawforge.models import Heartbeat, SentinelState

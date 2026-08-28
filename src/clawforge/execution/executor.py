@@ -1,14 +1,13 @@
 """Work executor with real AI agent dispatch via OpenAI."""
 
-import time
 import asyncio
 import json
-from typing import Optional
+import time
 
 import httpx
 
 from ..config import get_settings
-from ..models import Task, TaskResult, AgentType
+from ..models import AgentType, Task, TaskResult
 
 AGENT_DISPATCH = {
     "sales": AgentType.SALES,
@@ -43,7 +42,7 @@ AGENT_SYSTEM_PROMPTS = {
 class AIAgentExecutor:
     """Execute tasks using OpenAI API with agent-specific prompts."""
 
-    def __init__(self, api_key: Optional[str] = None, model: str = "gpt-4o-mini", timeout: float = 120.0):
+    def __init__(self, api_key: str | None = None, model: str = "gpt-4o-mini", timeout: float = 120.0):
         settings = get_settings()
         self.api_key = api_key or settings.OPENAI_API_KEY
         self.model = model
@@ -116,7 +115,7 @@ class AIAgentExecutor:
                 execution_time=time.time() - start,
                 agent_type=agent_type,
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return TaskResult(
                 task_id=task.id,
                 success=False,
@@ -180,12 +179,12 @@ class WorkExecutor:
                     return await asyncio.wait_for(
                         self._ai.execute_task(task), timeout=self.timeout
                     )
-                except (asyncio.TimeoutError, Exception):
+                except (TimeoutError, Exception):
                     pass
             return await asyncio.wait_for(
                 self._fallback.execute_task(task), timeout=self.timeout
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return TaskResult(
                 task_id=task.id,
                 success=False,

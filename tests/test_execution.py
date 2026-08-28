@@ -1,16 +1,17 @@
-import os
 import asyncio
+import os
 import time
+from unittest.mock import MagicMock
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
 
 os.environ.setdefault("CLAW_EARN_WALLET", "0x0000000000000000000000000000000000000000")
 os.environ.setdefault("CLAW_EARN_PRIVATE_KEY", "0x" + "1" * 64)
 
-from clawforge.execution.executor import WorkExecutor, AGENT_DISPATCH
-from clawforge.execution.proof import ProofGenerator
 from clawforge.execution.a2a import A2AQueue
-from clawforge.models import Task, AgentType, Subtask
+from clawforge.execution.executor import AGENT_DISPATCH, WorkExecutor
+from clawforge.execution.proof import ProofGenerator
+from clawforge.models import AgentType, Task
 
 
 def _make_task(task_id="task-1", value=50.0):

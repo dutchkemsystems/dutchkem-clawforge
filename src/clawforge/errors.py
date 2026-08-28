@@ -1,6 +1,6 @@
 """Structured error handling for Clawforge."""
 
-from typing import Any, Optional
+from typing import Any
 
 
 class ClawforgeError(Exception):
@@ -10,7 +10,7 @@ class ClawforgeError(Exception):
         self,
         message: str,
         code: str = "INTERNAL_ERROR",
-        details: Optional[dict[str, Any]] = None,
+        details: dict[str, Any] | None = None,
         status_code: int = 500,
     ):
         """Initialize ClawforgeError.
@@ -44,8 +44,8 @@ class ValidationError(ClawforgeError):
     def __init__(
         self,
         message: str,
-        field: Optional[str] = None,
-        details: Optional[dict[str, Any]] = None,
+        field: str | None = None,
+        details: dict[str, Any] | None = None,
     ):
         super().__init__(
             message=message,
@@ -62,7 +62,7 @@ class NotFoundError(ClawforgeError):
         self,
         resource: str,
         resource_id: str,
-        details: Optional[dict[str, Any]] = None,
+        details: dict[str, Any] | None = None,
     ):
         super().__init__(
             message=f"{resource} '{resource_id}' not found",
@@ -78,7 +78,7 @@ class AuthenticationError(ClawforgeError):
     def __init__(
         self,
         message: str = "Authentication required",
-        details: Optional[dict[str, Any]] = None,
+        details: dict[str, Any] | None = None,
     ):
         super().__init__(
             message=message,
@@ -94,7 +94,7 @@ class AuthorizationError(ClawforgeError):
     def __init__(
         self,
         message: str = "Insufficient permissions",
-        details: Optional[dict[str, Any]] = None,
+        details: dict[str, Any] | None = None,
     ):
         super().__init__(
             message=message,
@@ -110,8 +110,8 @@ class RateLimitError(ClawforgeError):
     def __init__(
         self,
         message: str = "Rate limit exceeded",
-        retry_after: Optional[int] = None,
-        details: Optional[dict[str, Any]] = None,
+        retry_after: int | None = None,
+        details: dict[str, Any] | None = None,
     ):
         super().__init__(
             message=message,
@@ -127,7 +127,7 @@ class ConflictError(ClawforgeError):
     def __init__(
         self,
         message: str,
-        details: Optional[dict[str, Any]] = None,
+        details: dict[str, Any] | None = None,
     ):
         super().__init__(
             message=message,
@@ -144,7 +144,7 @@ class ExternalServiceError(ClawforgeError):
         self,
         service: str,
         message: str = "External service error",
-        details: Optional[dict[str, Any]] = None,
+        details: dict[str, Any] | None = None,
     ):
         super().__init__(
             message=f"{service}: {message}",
@@ -160,7 +160,7 @@ class CryptoError(ClawforgeError):
     def __init__(
         self,
         message: str,
-        details: Optional[dict[str, Any]] = None,
+        details: dict[str, Any] | None = None,
     ):
         super().__init__(
             message=message,

@@ -1,7 +1,8 @@
 import os
-import pytest
 import tempfile
 from pathlib import Path
+
+import pytest
 
 os.environ.setdefault("CLAW_EARN_WALLET", "0x0000000000000000000000000000000000000000")
 os.environ.setdefault("CLAW_EARN_PRIVATE_KEY", "0x" + "1" * 64)

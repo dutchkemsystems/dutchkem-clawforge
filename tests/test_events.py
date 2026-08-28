@@ -1,7 +1,5 @@
 """Tests for WebSocket event bus."""
-import asyncio
-import pytest
-from clawforge.events.bus import EventBus, Event
+from clawforge.events.bus import Event, EventBus
 
 
 class TestEventBus:

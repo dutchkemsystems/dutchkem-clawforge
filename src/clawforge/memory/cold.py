@@ -2,13 +2,10 @@
 
 import json
 import time
-from pathlib import Path
-from typing import Optional
 
 import structlog
 
 from .base import BaseMemory
-from clawforge.models import MemoryEntry
 
 logger = structlog.get_logger(__name__)
 
@@ -20,7 +17,7 @@ class ColdMemory(BaseMemory):
         """Initialize COLD memory."""
         super().__init__("cold")
 
-    def get_identity(self) -> Optional[dict]:
+    def get_identity(self) -> dict | None:
         """Get agent identity."""
         return self.get("agent_identity")
 
@@ -28,7 +25,7 @@ class ColdMemory(BaseMemory):
         """Save agent identity."""
         return self.put("agent_identity", identity, tags=["identity"])
 
-    def get_reputation(self) -> Optional[dict]:
+    def get_reputation(self) -> dict | None:
         """Get reputation data."""
         return self.get("agent_reputation")
 

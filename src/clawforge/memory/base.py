@@ -2,9 +2,8 @@
 
 import json
 import time
-from abc import ABC, abstractmethod
-from pathlib import Path
-from typing import Any, Optional
+from abc import ABC
+from typing import Any
 
 import structlog
 
@@ -42,7 +41,7 @@ class BaseMemory(ABC):
 
         logger.debug(f"{self._tier.upper()} memory loaded", entries=len(self._entries))
 
-    def get(self, key: str) -> Optional[Any]:
+    def get(self, key: str) -> Any | None:
         """Get value by key."""
         for entry in self._entries.values():
             if entry.key == key:
@@ -52,11 +51,11 @@ class BaseMemory(ABC):
                 return entry.value
         return None
 
-    def retrieve(self, key: str) -> Optional[Any]:
+    def retrieve(self, key: str) -> Any | None:
         """Retrieve value by key (alias for get)."""
         return self.get(key)
 
-    def store(self, key: str, value: Any, tags: Optional[list[str]] = None, timestamp: Optional[float] = None) -> str:
+    def store(self, key: str, value: Any, tags: list[str] | None = None, timestamp: float | None = None) -> str:
         """Store a value in memory."""
         # Check if key already exists
         for entry in self._entries.values():
@@ -89,7 +88,7 @@ class BaseMemory(ABC):
         logger.debug(f"{self._tier.upper()} entry created", key=key, id=entry_id)
         return entry_id
 
-    def put(self, key: str, value: Any, tags: Optional[list[str]] = None) -> str:
+    def put(self, key: str, value: Any, tags: list[str] | None = None) -> str:
         """Store a value in memory (alias for store)."""
         return self.store(key, value, tags)
 

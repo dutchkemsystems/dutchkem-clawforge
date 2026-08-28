@@ -1,5 +1,4 @@
 from pathlib import Path
-import json
 
 from ..models import ReputationProfile
 

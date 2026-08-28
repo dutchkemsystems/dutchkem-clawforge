@@ -1,8 +1,7 @@
 """Module 0: Protocol Loader - Fetch and validate Claw Earn specifications."""
 
 import json
-from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import httpx
 import structlog
@@ -25,8 +24,8 @@ class ProtocolLoader:
         self._settings = get_settings()
         self._protocol_path = self._settings.get_protocol_path()
         self._protocol_path.mkdir(parents=True, exist_ok=True)
-        self._cached_spec: Optional[dict[str, Any]] = None
-        self._cached_version: Optional[str] = None
+        self._cached_spec: dict[str, Any] | None = None
+        self._cached_version: str | None = None
 
     async def fetch_protocol(self) -> dict[str, Any]:
         """Fetch protocol specification from remote URL.
@@ -126,7 +125,7 @@ class ProtocolLoader:
         logger.info("Protocol loaded from cache")
         return spec
 
-    def get_version(self) -> Optional[str]:
+    def get_version(self) -> str | None:
         """Get current protocol version hash.
 
         Returns:
@@ -168,7 +167,7 @@ class ProtocolLoader:
         logger.info("Protocol specification validated", version=spec.get("version"))
         return True
 
-    def get_endpoint(self, name: str) -> Optional[str]:
+    def get_endpoint(self, name: str) -> str | None:
         """Get API endpoint URL by name.
 
         Args:

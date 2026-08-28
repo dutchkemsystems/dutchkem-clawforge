@@ -1,12 +1,10 @@
 import json
-import pytest
 import tempfile
 from pathlib import Path
-from datetime import datetime
 
 from clawforge.economy.ledger import USDCLedger
-from clawforge.economy.staker import AutoStaker
 from clawforge.economy.reputation import ReputationTracker
+from clawforge.economy.staker import AutoStaker
 
 
 class TestUSDCLedger:

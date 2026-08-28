@@ -3,8 +3,8 @@
 import hashlib
 from pathlib import Path
 
-from web3 import Web3
 import structlog
+from web3 import Web3
 
 logger = structlog.get_logger(__name__)
 

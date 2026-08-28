@@ -1,9 +1,18 @@
-import pytest
-from clawforge.crypto.signer import Signer
-from clawforge.crypto.hasher import sha256_hash, keccak256_hash, compute_hash, compute_task_proof_hash, compute_hash_chain_entry, verify_hash_chain, hash_file_content
-from clawforge.crypto.vault import Vault, VaultError, encrypt_private_key, decrypt_private_key
 import tempfile
-from pathlib import Path
+
+import pytest
+
+from clawforge.crypto.hasher import (
+    compute_hash,
+    compute_hash_chain_entry,
+    compute_task_proof_hash,
+    hash_file_content,
+    keccak256_hash,
+    sha256_hash,
+    verify_hash_chain,
+)
+from clawforge.crypto.signer import Signer
+from clawforge.crypto.vault import Vault, VaultError, decrypt_private_key, encrypt_private_key
 
 
 class TestSigner:

@@ -1,6 +1,5 @@
 """Module 1: Wallet management and authentication."""
 
-from typing import Optional
 
 import structlog
 
@@ -16,7 +15,7 @@ class WalletManager:
     def __init__(self) -> None:
         """Initialize wallet manager."""
         self._settings = get_settings()
-        self._signer: Optional[Signer] = None
+        self._signer: Signer | None = None
 
     def load_wallet(self) -> Signer:
         """Load wallet from environment variables.
@@ -90,7 +89,7 @@ class WalletManager:
         return self._signer is not None
 
     @property
-    def address(self) -> Optional[str]:
+    def address(self) -> str | None:
         """Get wallet address if loaded."""
         if self._signer:
             return self._signer.address

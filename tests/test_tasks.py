@@ -1,19 +1,19 @@
 import os
-import time
-import pytest
 import tempfile
+import time
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 os.environ.setdefault("CLAW_EARN_WALLET", "0x0000000000000000000000000000000000000000")
 os.environ.setdefault("CLAW_EARN_PRIVATE_KEY", "0x" + "1" * 64)
 
-from clawforge.tasks.discovery import TaskDiscovery
-from clawforge.tasks.bidder import SmartBidder
-from clawforge.tasks.sourcer import SupplyDemandScanner
-from clawforge.economy.reputation import ReputationTracker
 from clawforge.models import Task
 from clawforge.protocol.trust import TrustBoundary
+from clawforge.tasks.bidder import SmartBidder
+from clawforge.tasks.discovery import TaskDiscovery
+from clawforge.tasks.sourcer import SupplyDemandScanner
 
 
 def _make_task(task_id="task-1", value=50.0, status="FUNDED"):

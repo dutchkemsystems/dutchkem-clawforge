@@ -2,15 +2,13 @@
 
 import json
 import time
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Optional
+from datetime import UTC, datetime
 
 import structlog
 
 from clawforge.config import get_settings
 from clawforge.crypto.signer import Signer
-from clawforge.crypto.vault import Vault, VaultError
+from clawforge.crypto.vault import Vault
 from clawforge.models import SpendLimit
 
 logger = structlog.get_logger(__name__)
@@ -23,7 +21,7 @@ class SpendLimitExceeded(Exception):
 class ServerSigner:
     """Server signer with scoped credentials and spend limits."""
 
-    def __init__(self, signer: Signer, vault: Optional[Vault] = None) -> None:
+    def __init__(self, signer: Signer, vault: Vault | None = None) -> None:
         """Initialize server signer."""
         self._signer = signer
         self._vault = vault
@@ -123,8 +121,8 @@ class ServerSigner:
 
     def _needs_daily_reset(self) -> bool:
         """Check if daily stake counter needs reset (UTC-based)."""
-        now = datetime.now(timezone.utc).date()
-        last_reset = datetime.fromtimestamp(self._spend_limit.last_reset, tz=timezone.utc).date()
+        now = datetime.now(UTC).date()
+        last_reset = datetime.fromtimestamp(self._spend_limit.last_reset, tz=UTC).date()
         return now > last_reset
 
     def _reset_daily_stake(self) -> None:

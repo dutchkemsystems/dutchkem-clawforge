@@ -1,14 +1,12 @@
 """Tests for on-chain settlement module."""
-import json
-import pytest
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from clawforge.settlement.onchain import (
     OnChainSettlement,
-    SettlementQueue,
     OnChainSettler,
+    SettlementQueue,
 )
 
 

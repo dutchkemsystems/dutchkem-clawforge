@@ -1,6 +1,5 @@
-import os
 import json
-import pytest
+import os
 import tempfile
 from pathlib import Path
 
@@ -8,12 +7,10 @@ os.environ.setdefault("CLAW_EARN_WALLET", "0x00000000000000000000000000000000000
 os.environ.setdefault("CLAW_EARN_PRIVATE_KEY", "0x" + "1" * 64)
 
 import time
-from datetime import datetime
-from unittest.mock import patch, MagicMock
 
 from clawforge.audit.logger import HashChainLogger
 from clawforge.audit.settlement import SettlementGenerator
-from clawforge.models import AuditEntry, StateTransition
+from clawforge.models import StateTransition
 
 
 class TestHashChainLogger:

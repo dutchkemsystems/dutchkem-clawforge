@@ -1,10 +1,9 @@
 """EIP-191 CLAW_V2 message signing."""
 
-from typing import Optional
 
+import structlog
 from eth_account import Account
 from eth_account.messages import encode_defunct
-import structlog
 
 logger = structlog.get_logger(__name__)
 

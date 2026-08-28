@@ -1,11 +1,11 @@
 """AES-256-GCM Secret Vault for key encryption at rest."""
 
 import os
+from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Generator
 
-from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 import structlog
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 logger = structlog.get_logger(__name__)
 

@@ -1,11 +1,11 @@
 """WARM Memory Tier - Extracted lessons from completed tasks."""
 
-from typing import Optional
 
 import structlog
 
-from .base import BaseMemory
 from clawforge.models import MemoryEntry
+
+from .base import BaseMemory
 
 logger = structlog.get_logger(__name__)
 

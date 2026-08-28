@@ -5,17 +5,17 @@ import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from .config import get_settings
-from .api.routes import router
 from .api.auth import APIKeyAuthMiddleware
 from .api.ratelimit import RateLimitMiddleware
-from .events.bus import event_bus, Event
-from .sentinel.watcher import Sentinel
+from .api.routes import router
+from .config import get_settings
 from .errors import ClawforgeError
+from .events.bus import event_bus
+from .sentinel.watcher import Sentinel
 
 
 @asynccontextmanager

@@ -1,9 +1,8 @@
 """On-chain settlement module for Base chain USDC transactions."""
 
-import json
 import time
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -15,12 +14,12 @@ class OnChainSettlement(BaseModel):
     from_address: str
     to_address: str
     amount_usdc: float
-    tx_hash: Optional[str] = None
-    block_number: Optional[int] = None
+    tx_hash: str | None = None
+    block_number: int | None = None
     status: str = "pending"
     created_at: float = Field(default_factory=time.time)
-    settled_at: Optional[float] = None
-    gas_used: Optional[float] = None
+    settled_at: float | None = None
+    gas_used: float | None = None
 
 
 class SettlementQueue:
