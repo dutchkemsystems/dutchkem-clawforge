@@ -1,5 +1,6 @@
 """FastAPI routes for Clawforge API."""
 
+import re
 import time
 from typing import Optional
 
@@ -22,6 +23,10 @@ from ..events.bus import event_bus, Event
 from ..execution.executor import WorkExecutor
 
 router = APIRouter(prefix="/v1", tags=["clawforge"])
+
+# Input validation patterns
+_TASK_ID_PATTERN = re.compile(r"^[a-zA-Z0-9_-]{1,128}$")
+_ADDRESS_PATTERN = re.compile(r"^0x[0-9a-fA-F]{40}$")
 
 # Lazy-loaded singletons
 _ledger: Optional[USDCLedger] = None
@@ -80,6 +85,8 @@ async def list_tasks(status: str = Query("FUNDED")):
 @router.get("/tasks/{task_id}")
 async def get_task(task_id: str):
     """Get task details."""
+    if not _TASK_ID_PATTERN.match(task_id):
+        raise HTTPException(status_code=400, detail="Invalid task_id format")
     hot = _get_hot()
     cached_tasks = hot.get("cached_tasks") or []
     for task in cached_tasks:
@@ -91,9 +98,11 @@ async def get_task(task_id: str):
 @router.post("/tasks/{task_id}/bid")
 async def bid_on_task(task_id: str, bid_amount: float):
     """Submit a bid on a task."""
+    if not _TASK_ID_PATTERN.match(task_id):
+        raise HTTPException(status_code=400, detail="Invalid task_id format")
+    if bid_amount <= 0 or bid_amount > 10000:
+        raise HTTPException(status_code=400, detail="Bid amount must be between 0 and 10000 USDC")
     rep = _get_reputation()
-    if bid_amount <= 0:
-        raise HTTPException(status_code=400, detail="Bid amount must be positive")
 
     staker = _get_staker()
     stake = staker.stake_for_task(task_id, bid_amount)
@@ -110,6 +119,8 @@ async def bid_on_task(task_id: str, bid_amount: float):
 @router.post("/tasks/{task_id}/submit")
 async def submit_proof(task_id: str):
     """Submit proof of work completion."""
+    if not _TASK_ID_PATTERN.match(task_id):
+        raise HTTPException(status_code=400, detail="Invalid task_id format")
     return {
         "task_id": task_id,
         "status": "proof_submitted",
@@ -120,6 +131,8 @@ async def submit_proof(task_id: str):
 @router.post("/tasks/{task_id}/stake-reclaim")
 async def reclaim_stake(task_id: str):
     """Reclaim staked USDC after task completion."""
+    if not _TASK_ID_PATTERN.match(task_id):
+        raise HTTPException(status_code=400, detail="Invalid task_id format")
     staker = _get_staker()
     reclaimed = staker.execute_rate_and_claim(task_id)
     return {
@@ -167,6 +180,8 @@ async def verify_audit_chain():
 @router.get("/settlement/{task_id}")
 async def get_settlement(task_id: str):
     """Get settlement statement for a task."""
+    if not _TASK_ID_PATTERN.match(task_id):
+        raise HTTPException(status_code=400, detail="Invalid task_id format")
     ledger = _get_ledger()
     entries = ledger.get_entries(task_id=task_id)
     if not entries:
@@ -242,6 +257,8 @@ async def execute_task(task_id: str):
     based on the task type. Requires OPENAI_API_KEY for real execution,
     falls back to stub output otherwise.
     """
+    if not _TASK_ID_PATTERN.match(task_id):
+        raise HTTPException(status_code=400, detail="Invalid task_id format")
     executor = WorkExecutor(timeout=300.0)
     task = Task(
         id=task_id,
@@ -282,6 +299,12 @@ async def submit_settlement(task_id: str, to_address: str, amount_usdc: float):
 
     Creates a settlement record and queues it for broadcast on Base chain.
     """
+    if not _TASK_ID_PATTERN.match(task_id):
+        raise HTTPException(status_code=400, detail="Invalid task_id format")
+    if not _ADDRESS_PATTERN.match(to_address):
+        raise HTTPException(status_code=400, detail="Invalid Ethereum address format")
+    if amount_usdc <= 0 or amount_usdc > 100000:
+        raise HTTPException(status_code=400, detail="Amount must be between 0 and 100000 USDC")
     from ..settlement.onchain import create_settler, SettlementQueue
     from pathlib import Path
 
@@ -309,6 +332,8 @@ async def submit_settlement(task_id: str, to_address: str, amount_usdc: float):
 @router.get("/settlement/{task_id}/status")
 async def get_settlement_status(task_id: str):
     """Get settlement status for a task."""
+    if not _TASK_ID_PATTERN.match(task_id):
+        raise HTTPException(status_code=400, detail="Invalid task_id format")
     from ..settlement.onchain import SettlementQueue
     from pathlib import Path
 
@@ -330,6 +355,12 @@ async def full_task_lifecycle(task_id: str, bid_amount: float, to_address: str):
 
     Bids on a task, executes it via AI, generates proof, and queues settlement.
     """
+    if not _TASK_ID_PATTERN.match(task_id):
+        raise HTTPException(status_code=400, detail="Invalid task_id format")
+    if bid_amount <= 0 or bid_amount > 10000:
+        raise HTTPException(status_code=400, detail="Bid amount must be between 0 and 10000 USDC")
+    if not _ADDRESS_PATTERN.match(to_address):
+        raise HTTPException(status_code=400, detail="Invalid Ethereum address format")
     # 1. Bid
     rep = _get_reputation()
     staker = _get_staker()

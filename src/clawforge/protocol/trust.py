@@ -51,9 +51,9 @@ class TrustBoundary:
             )
             raise TrustBoundaryError(f"Non-HTTPS URL rejected: {url}")
 
-        # Must be from allowed host
+        # Must be from allowed host (exact match or subdomain of allowed host)
         hostname = parsed.hostname or ""
-        if not hostname.endswith(ALLOWED_HOST):
+        if hostname != ALLOWED_HOST and not hostname.endswith(f".{ALLOWED_HOST}"):
             logger.critical(
                 "Untrusted host rejected",
                 url=url,
@@ -90,10 +90,9 @@ class TrustBoundary:
             final_url = str(response.url)
             final_parsed = urlparse(final_url)
 
-            # Validate final host
-            if not final_parsed.hostname or not final_parsed.hostname.endswith(
-                ALLOWED_HOST
-            ):
+            # Validate final host (exact match or subdomain)
+            final_host = final_parsed.hostname or ""
+            if final_host != ALLOWED_HOST and not final_host.endswith(f".{ALLOWED_HOST}"):
                 logger.critical(
                     "Redirect to untrusted host blocked",
                     original=url,

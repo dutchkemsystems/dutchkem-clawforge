@@ -73,14 +73,22 @@ def verify_hash_chain(
     return True
 
 
-def hash_file_content(file_path: str) -> str:
+def hash_file_content(file_path: str, allowed_dirs: list[str] | None = None) -> str:
     """Compute SHA-256 hash of file content.
 
-    Validates path is a regular file to prevent path traversal.
+    Validates path is a regular file within allowed directories to prevent path traversal.
     """
     resolved = Path(file_path).resolve()
     if not resolved.is_file():
         raise ValueError(f"Not a valid file: {file_path}")
+
+    # Path traversal protection: restrict to allowed directories
+    if allowed_dirs:
+        in_allowed = any(
+            resolved.resolve().is_relative_to(Path(d).resolve()) for d in allowed_dirs
+        )
+        if not in_allowed:
+            raise ValueError(f"Path outside allowed directories: {file_path}")
 
     sha256 = hashlib.sha256()
     with open(resolved, "rb") as f:
