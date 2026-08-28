@@ -2,6 +2,7 @@
 
 import json
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -121,10 +122,10 @@ class ServerSigner:
         )
 
     def _needs_daily_reset(self) -> bool:
-        """Check if daily stake counter needs reset."""
-        now = time.time()
-        last_reset = self._spend_limit.last_reset
-        return (now - last_reset) > 86400  # 24 hours in seconds
+        """Check if daily stake counter needs reset (UTC-based)."""
+        now = datetime.now(timezone.utc).date()
+        last_reset = datetime.fromtimestamp(self._spend_limit.last_reset, tz=timezone.utc).date()
+        return now > last_reset
 
     def _reset_daily_stake(self) -> None:
         """Reset daily stake counter."""

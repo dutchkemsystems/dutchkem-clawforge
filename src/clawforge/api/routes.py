@@ -5,6 +5,7 @@ import time
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
+from fastapi.responses import JSONResponse
 
 from ..config import get_settings
 from ..models import (
@@ -21,6 +22,8 @@ from ..sentinel.watcher import sentinel
 from ..protocol.trust import trust_boundary
 from ..events.bus import event_bus, Event
 from ..execution.executor import WorkExecutor
+from ..audit.logger import HashChainLogger
+from ..errors import ValidationError, NotFoundError, ClawforgeError
 
 router = APIRouter(prefix="/v1", tags=["clawforge"])
 
@@ -33,6 +36,7 @@ _ledger: Optional[USDCLedger] = None
 _staker: Optional[AutoStaker] = None
 _reputation: Optional[ReputationTracker] = None
 _hot: Optional[HotMemory] = None
+_audit_logger: Optional[HashChainLogger] = None
 
 
 def _get_ledger() -> USDCLedger:
@@ -65,6 +69,14 @@ def _get_hot() -> HotMemory:
     return _hot
 
 
+def _get_audit_logger() -> HashChainLogger:
+    global _audit_logger
+    if _audit_logger is None:
+        settings = get_settings()
+        _audit_logger = HashChainLogger(settings.get_audit_path())
+    return _audit_logger
+
+
 @router.get("/health")
 async def health_check():
     """Health check endpoint."""
@@ -86,26 +98,30 @@ async def list_tasks(status: str = Query("FUNDED")):
 async def get_task(task_id: str):
     """Get task details."""
     if not _TASK_ID_PATTERN.match(task_id):
-        raise HTTPException(status_code=400, detail="Invalid task_id format")
+        raise ValidationError("Invalid task_id format", field="task_id")
     hot = _get_hot()
     cached_tasks = hot.get("cached_tasks") or []
     for task in cached_tasks:
         if task.get("id") == task_id:
             return task
-    raise HTTPException(status_code=404, detail="Task not found")
+    raise NotFoundError("Task", task_id)
 
 
 @router.post("/tasks/{task_id}/bid")
 async def bid_on_task(task_id: str, bid_amount: float):
     """Submit a bid on a task."""
     if not _TASK_ID_PATTERN.match(task_id):
-        raise HTTPException(status_code=400, detail="Invalid task_id format")
+        raise ValidationError("Invalid task_id format", field="task_id")
     if bid_amount <= 0 or bid_amount > 10000:
-        raise HTTPException(status_code=400, detail="Bid amount must be between 0 and 10000 USDC")
+        raise ValidationError("Bid amount must be between 0 and 10000 USDC", field="bid_amount")
     rep = _get_reputation()
 
     staker = _get_staker()
     stake = staker.stake_for_task(task_id, bid_amount)
+
+    # Log audit entry
+    audit_logger = _get_audit_logger()
+    audit_logger.log("task_bid", task_id, {"bid_amount": bid_amount, "stake": stake})
 
     return {
         "task_id": task_id,
@@ -120,7 +136,12 @@ async def bid_on_task(task_id: str, bid_amount: float):
 async def submit_proof(task_id: str):
     """Submit proof of work completion."""
     if not _TASK_ID_PATTERN.match(task_id):
-        raise HTTPException(status_code=400, detail="Invalid task_id format")
+        raise ValidationError("Invalid task_id format", field="task_id")
+
+    # Log audit entry
+    audit_logger = _get_audit_logger()
+    audit_logger.log("task_proof_submitted", task_id)
+
     return {
         "task_id": task_id,
         "status": "proof_submitted",
@@ -132,9 +153,14 @@ async def submit_proof(task_id: str):
 async def reclaim_stake(task_id: str):
     """Reclaim staked USDC after task completion."""
     if not _TASK_ID_PATTERN.match(task_id):
-        raise HTTPException(status_code=400, detail="Invalid task_id format")
+        raise ValidationError("Invalid task_id format", field="task_id")
     staker = _get_staker()
     reclaimed = staker.execute_rate_and_claim(task_id)
+
+    # Log audit entry
+    audit_logger = _get_audit_logger()
+    audit_logger.log("task_stake_reclaimed", task_id, {"reclaimed_amount": reclaimed})
+
     return {
         "task_id": task_id,
         "reclaimed_amount": reclaimed,
@@ -166,7 +192,9 @@ async def get_balance():
 @router.get("/audit")
 async def get_audit_log(task_id: str = "", since: float = 0):
     """Get audit log entries."""
-    return {"entries": [], "count": 0, "message": "Audit logger available via HashChainLogger class"}
+    audit_logger = _get_audit_logger()
+    entries = audit_logger.get_entries(task_id=task_id, since=since)
+    return {"entries": [e.model_dump() for e in entries], "count": len(entries)}
 
 
 @router.get("/audit/verify")
@@ -181,11 +209,11 @@ async def verify_audit_chain():
 async def get_settlement(task_id: str):
     """Get settlement statement for a task."""
     if not _TASK_ID_PATTERN.match(task_id):
-        raise HTTPException(status_code=400, detail="Invalid task_id format")
+        raise ValidationError("Invalid task_id format", field="task_id")
     ledger = _get_ledger()
     entries = ledger.get_entries(task_id=task_id)
     if not entries:
-        raise HTTPException(status_code=404, detail="No entries found for task")
+        raise NotFoundError("Settlement", task_id)
     return {
         "task_id": task_id,
         "entries": [e.model_dump() for e in entries],
@@ -233,7 +261,7 @@ async def approve_trust_request(index: int):
     """Approve a trust boundary violation request."""
     success = trust_boundary.approve_request(index)
     if not success:
-        raise HTTPException(status_code=404, detail="Request not found or already processed")
+        raise NotFoundError("Trust request", str(index))
     return {"index": index, "status": "approved"}
 
 
@@ -242,7 +270,7 @@ async def reject_trust_request(index: int):
     """Reject a trust boundary violation request."""
     success = trust_boundary.reject_request(index)
     if not success:
-        raise HTTPException(status_code=404, detail="Request not found or already processed")
+        raise NotFoundError("Trust request", str(index))
     return {"index": index, "status": "rejected"}
 
 
@@ -258,7 +286,7 @@ async def execute_task(task_id: str):
     falls back to stub output otherwise.
     """
     if not _TASK_ID_PATTERN.match(task_id):
-        raise HTTPException(status_code=400, detail="Invalid task_id format")
+        raise ValidationError("Invalid task_id format", field="task_id")
     executor = WorkExecutor(timeout=300.0)
     task = Task(
         id=task_id,
@@ -269,6 +297,14 @@ async def execute_task(task_id: str):
         created_at=time.time(),
     )
     result = await executor.execute(task)
+
+    # Log audit entry
+    audit_logger = _get_audit_logger()
+    audit_logger.log("task_executed", task_id, {
+        "success": result.success,
+        "execution_time": result.execution_time,
+        "agent_type": result.agent_type.value,
+    })
 
     await event_bus.publish(Event(
         type="task_executed",
@@ -300,11 +336,11 @@ async def submit_settlement(task_id: str, to_address: str, amount_usdc: float):
     Creates a settlement record and queues it for broadcast on Base chain.
     """
     if not _TASK_ID_PATTERN.match(task_id):
-        raise HTTPException(status_code=400, detail="Invalid task_id format")
+        raise ValidationError("Invalid task_id format", field="task_id")
     if not _ADDRESS_PATTERN.match(to_address):
-        raise HTTPException(status_code=400, detail="Invalid Ethereum address format")
+        raise ValidationError("Invalid Ethereum address format", field="to_address")
     if amount_usdc <= 0 or amount_usdc > 100000:
-        raise HTTPException(status_code=400, detail="Amount must be between 0 and 100000 USDC")
+        raise ValidationError("Amount must be between 0 and 100000 USDC", field="amount_usdc")
     from ..settlement.onchain import create_settler, SettlementQueue
     from pathlib import Path
 
@@ -333,7 +369,7 @@ async def submit_settlement(task_id: str, to_address: str, amount_usdc: float):
 async def get_settlement_status(task_id: str):
     """Get settlement status for a task."""
     if not _TASK_ID_PATTERN.match(task_id):
-        raise HTTPException(status_code=400, detail="Invalid task_id format")
+        raise ValidationError("Invalid task_id format", field="task_id")
     from ..settlement.onchain import SettlementQueue
     from pathlib import Path
 
@@ -343,7 +379,7 @@ async def get_settlement_status(task_id: str):
         if s.task_id == task_id:
             return s.model_dump()
 
-    raise HTTPException(status_code=404, detail="Settlement not found")
+    raise NotFoundError("Settlement", task_id)
 
 
 # --- Agent Execution with Event Broadcasting ---
@@ -356,11 +392,11 @@ async def full_task_lifecycle(task_id: str, bid_amount: float, to_address: str):
     Bids on a task, executes it via AI, generates proof, and queues settlement.
     """
     if not _TASK_ID_PATTERN.match(task_id):
-        raise HTTPException(status_code=400, detail="Invalid task_id format")
+        raise ValidationError("Invalid task_id format", field="task_id")
     if bid_amount <= 0 or bid_amount > 10000:
-        raise HTTPException(status_code=400, detail="Bid amount must be between 0 and 10000 USDC")
+        raise ValidationError("Bid amount must be between 0 and 10000 USDC", field="bid_amount")
     if not _ADDRESS_PATTERN.match(to_address):
-        raise HTTPException(status_code=400, detail="Invalid Ethereum address format")
+        raise ValidationError("Invalid Ethereum address format", field="to_address")
     # 1. Bid
     rep = _get_reputation()
     staker = _get_staker()

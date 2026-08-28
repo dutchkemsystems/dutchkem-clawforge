@@ -94,12 +94,15 @@ class Vault:
             VaultError: If decryption fails.
         """
         decrypted = self.decrypt(encrypted)
+        # Use bytearray for zeroization (strings are immutable in Python)
+        decrypted_bytes = bytearray(decrypted.encode('utf-8'))
         try:
             yield decrypted
         finally:
             # Zeroize the decrypted key from memory
-            decrypted = "0" * len(decrypted)
-            del decrypted
+            for i in range(len(decrypted_bytes)):
+                decrypted_bytes[i] = 0
+            del decrypted_bytes
 
     def rotate_key(self, new_vault_key: str) -> None:
         """Rotate the vault encryption key.

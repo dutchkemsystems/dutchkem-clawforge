@@ -1,93 +1,178 @@
-"""Live API smoke tests — run after uvicorn is up on :8766."""
-import httpx, json, sys
+"""Smoke tests for Clawforge API using pytest TestClient."""
 
-BASE = "http://127.0.0.1:8766"
-passed = 0
-failed = 0
+import pytest
+from fastapi.testclient import TestClient
 
-client = httpx.Client(base_url=BASE, timeout=10)
+from clawforge.main import app
 
-def check(name, method, url, expected_status=None, expected_body=None):
-    global passed, failed
-    try:
-        r = getattr(client, method)(url)
-        ok = True
-        if expected_status and r.status_code != expected_status:
-            print(f"  FAIL {name}: expected status {expected_status}, got {r.status_code}")
-            ok = False
-        if expected_body:
-            for k, v in expected_body.items():
-                actual = r.json().get(k)
-                if actual != v:
-                    print(f"  FAIL {name}: expected {k}={v}, got {actual}")
-                    ok = False
-        if ok:
-            print(f"  PASS {name} [{r.status_code}]")
-            passed += 1
-        else:
-            failed += 1
-    except Exception as e:
-        print(f"  FAIL {name}: {e}")
-        failed += 1
 
-print("=== GET ENDPOINTS ===")
-check("health", "get", "/v1/health", 200, {"status": "ok", "service": "clawforge"})
-check("tasks list", "get", "/v1/tasks", 200)
-check("tasks filter", "get", "/v1/tasks?status=FUNDED", 200)
-check("task not found", "get", "/v1/tasks/nonexistent", 404)
-check("ledger", "get", "/v1/ledger", 200)
-check("ledger balance", "get", "/v1/ledger/balance", 200, {"currency": "USDC"})
-check("audit log", "get", "/v1/audit", 200)
-check("audit verify", "get", "/v1/audit/verify", 200, {"valid": True})
-check("settlement 404", "get", "/v1/settlement/nonexistent", 404)
-check("sentinel", "get", "/v1/sentinel/status", 200)
-check("reputation", "get", "/v1/reputation", 200)
-check("trust pending", "get", "/v1/trust/pending-approvals", 200)
+@pytest.fixture
+def client():
+    """Create a test client."""
+    return TestClient(app)
 
-print("\n=== POST ENDPOINTS ===")
-check("bid task-1", "post", "/v1/tasks/task-1/bid?bid_amount=50.0", 200)
-check("bid negative", "post", "/v1/tasks/task-1/bid?bid_amount=-10.0", 400)
-check("submit proof", "post", "/v1/tasks/task-1/submit", 200)
-check("reclaim stake", "post", "/v1/tasks/task-1/stake-reclaim", 200)
-check("rate task", "post", "/v1/reputation/rate?task_id=task-1&rating=4.5", 200)
-check("rate invalid", "post", "/v1/reputation/rate?task_id=task-1&rating=6.0", 400)
-check("approve nonexistent", "post", "/v1/trust/approve/999", 404)
-check("reject nonexistent", "post", "/v1/trust/reject/999", 404)
 
-print("\n=== CHAINED OPERATIONS ===")
-r = client.post("/v1/tasks/task-2/bid?bid_amount=25.0")
-assert r.status_code == 200, f"bid failed: {r.status_code}"
-r = client.post("/v1/tasks/task-2/submit")
-assert r.status_code == 200, f"submit failed: {r.status_code}"
-r = client.post("/v1/tasks/task-2/stake-reclaim")
-assert r.status_code == 200, f"reclaim failed: {r.status_code}"
-r = client.post("/v1/reputation/rate?task_id=task-2&rating=5.0")
-assert r.status_code == 200, f"rate failed: {r.status_code}"
-print("  PASS chained bid->submit->reclaim->rate")
-passed += 1
+def test_health_check(client):
+    """Test health check endpoint."""
+    response = client.get("/v1/health")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "ok"
+    assert data["service"] == "clawforge"
 
-r = client.get("/v1/ledger")
-entries = r.json()["count"]
-print(f"  PASS ledger has {entries} entries after operations")
-passed += 1
 
-r = client.get("/v1/audit/verify")
-assert r.json()["valid"] is True
-print("  PASS audit chain still valid")
-passed += 1
+def test_list_tasks(client):
+    """Test list tasks endpoint."""
+    response = client.get("/v1/tasks")
+    assert response.status_code == 200
+    data = response.json()
+    assert "tasks" in data
+    assert "count" in data
 
-r = client.post("/v1/tasks/task-1/bid?bid_amount=75.0")
-assert r.status_code == 200
-print("  PASS second bid on task-1")
-passed += 1
 
-r = client.get("/v1/tasks")
-print(f"  PASS task list: {r.json()['count']} tasks")
-passed += 1
+def test_list_tasks_with_filter(client):
+    """Test list tasks with status filter."""
+    response = client.get("/v1/tasks?status=FUNDED")
+    assert response.status_code == 200
+    data = response.json()
+    assert "tasks" in data
 
-client.close()
-print(f"\n{'='*50}")
-print(f"RESULTS: {passed} passed, {failed} failed, {passed+failed} total")
-if failed > 0:
-    sys.exit(1)
-print("ALL TESTS PASSED")
+
+def test_get_task_not_found(client):
+    """Test get task that doesn't exist."""
+    response = client.get("/v1/tasks/nonexistent")
+    assert response.status_code == 404
+
+
+def test_get_ledger(client):
+    """Test get ledger endpoint."""
+    response = client.get("/v1/ledger")
+    assert response.status_code == 200
+    data = response.json()
+    assert "entries" in data
+    assert "count" in data
+
+
+def test_get_balance(client):
+    """Test get balance endpoint."""
+    response = client.get("/v1/ledger/balance")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["currency"] == "USDC"
+
+
+def test_get_audit_log(client):
+    """Test get audit log endpoint."""
+    response = client.get("/v1/audit")
+    assert response.status_code == 200
+    data = response.json()
+    assert "entries" in data
+    assert "count" in data
+
+
+def test_verify_audit_chain(client):
+    """Test verify audit chain endpoint."""
+    response = client.get("/v1/audit/verify")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["valid"] is True
+
+
+def test_get_sentinel_status(client):
+    """Test get sentinel status endpoint."""
+    response = client.get("/v1/sentinel/status")
+    assert response.status_code == 200
+
+
+def test_get_reputation(client):
+    """Test get reputation endpoint."""
+    response = client.get("/v1/reputation")
+    assert response.status_code == 200
+
+
+def test_get_pending_approvals(client):
+    """Test get pending approvals endpoint."""
+    response = client.get("/v1/trust/pending-approvals")
+    assert response.status_code == 200
+    data = response.json()
+    assert "approvals" in data
+
+
+def test_bid_on_task(client):
+    """Test bid on task endpoint."""
+    response = client.post("/v1/tasks/task-test/bid?bid_amount=50.0")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["task_id"] == "task-test"
+    assert data["bid_amount"] == 50.0
+
+
+def test_bid_invalid_amount(client):
+    """Test bid with invalid amount."""
+    response = client.post("/v1/tasks/task-test/bid?bid_amount=-10.0")
+    assert response.status_code == 400
+
+
+def test_submit_proof(client):
+    """Test submit proof endpoint."""
+    response = client.post("/v1/tasks/task-test/submit")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "proof_submitted"
+
+
+def test_reclaim_stake(client):
+    """Test reclaim stake endpoint."""
+    response = client.post("/v1/tasks/task-test/stake-reclaim")
+    assert response.status_code == 200
+
+
+def test_rate_task(client):
+    """Test rate task endpoint."""
+    response = client.post("/v1/reputation/rate?task_id=task-test&rating=4.5")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["rating"] == 4.5
+
+
+def test_rate_invalid_rating(client):
+    """Test rate with invalid rating."""
+    response = client.post("/v1/reputation/rate?task_id=task-test&rating=6.0")
+    assert response.status_code == 400
+
+
+def test_approve_trust_request_not_found(client):
+    """Test approve trust request that doesn't exist."""
+    response = client.post("/v1/trust/approve/999")
+    assert response.status_code == 404
+
+
+def test_reject_trust_request_not_found(client):
+    """Test reject trust request that doesn't exist."""
+    response = client.post("/v1/trust/reject/999")
+    assert response.status_code == 404
+
+
+def test_chained_operations(client):
+    """Test chained bid -> submit -> reclaim -> rate operations."""
+    # Bid
+    response = client.post("/v1/tasks/task-chain/bid?bid_amount=25.0")
+    assert response.status_code == 200
+
+    # Submit
+    response = client.post("/v1/tasks/task-chain/submit")
+    assert response.status_code == 200
+
+    # Reclaim
+    response = client.post("/v1/tasks/task-chain/stake-reclaim")
+    assert response.status_code == 200
+
+    # Rate
+    response = client.post("/v1/reputation/rate?task_id=task-chain&rating=5.0")
+    assert response.status_code == 200
+
+
+def test_get_task_settlement_not_found(client):
+    """Test get settlement for non-existent task."""
+    response = client.get("/v1/settlement/nonexistent")
+    assert response.status_code == 404

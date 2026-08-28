@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Optional
 
 from ..models import LedgerEntry
+from ..utils.filelock import file_lock, locked_file
 
 
 class USDCLedger:
@@ -19,7 +20,7 @@ class USDCLedger:
         if not self._ledger_file.exists():
             return "genesis"
         last_line = ""
-        with open(self._ledger_file, "r") as f:
+        with locked_file(self._ledger_file, "r") as f:
             for line in f:
                 if line.strip():
                     last_line = line.strip()
@@ -34,32 +35,33 @@ class USDCLedger:
 
     def append(self, task_id: str, amount: float, tx_type: str, description: str = "") -> LedgerEntry:
         """Append a new ledger entry with hash chaining."""
-        entry = LedgerEntry(
-            timestamp=time.time(),
-            task_id=task_id,
-            amount=amount,
-            type=tx_type,
-            description=description,
-            prev_hash=self._last_hash,
-        )
-        entry.hash = self._compute_hash(self._last_hash, {k: v for k, v in entry.model_dump().items() if k != "hash"})
-        self._last_hash = entry.hash
+        with file_lock(self._ledger_file):
+            entry = LedgerEntry(
+                timestamp=time.time(),
+                task_id=task_id,
+                amount=amount,
+                type=tx_type,
+                description=description,
+                prev_hash=self._last_hash,
+            )
+            entry.hash = self._compute_hash(self._last_hash, {k: v for k, v in entry.model_dump().items() if k != "hash"})
+            self._last_hash = entry.hash
 
-        # Atomic write: read existing, write all to temp, then rename
-        existing = ""
-        if self._ledger_file.exists():
-            existing = self._ledger_file.read_text()
-        temp_file = self._ledger_file.with_suffix(".tmp")
-        temp_file.write_text(existing + entry.model_dump_json() + "\n")
-        temp_file.replace(self._ledger_file)
+            # Atomic write: read existing, write all to temp, then rename
+            existing = ""
+            if self._ledger_file.exists():
+                existing = self._ledger_file.read_text()
+            temp_file = self._ledger_file.with_suffix(".tmp")
+            temp_file.write_text(existing + entry.model_dump_json() + "\n")
+            temp_file.replace(self._ledger_file)
 
-        return entry
+            return entry
 
     def get_entries(self, task_id: Optional[str] = None, since: Optional[float] = None) -> list[LedgerEntry]:
         entries = []
         if not self._ledger_file.exists():
             return entries
-        with open(self._ledger_file, "r") as f:
+        with locked_file(self._ledger_file, "r") as f:
             for line in f:
                 if not line.strip():
                     continue
@@ -76,7 +78,7 @@ class USDCLedger:
         prev_hash = "genesis"
         if not self._ledger_file.exists():
             return True
-        with open(self._ledger_file, "r") as f:
+        with locked_file(self._ledger_file, "r") as f:
             for line in f:
                 if not line.strip():
                     continue

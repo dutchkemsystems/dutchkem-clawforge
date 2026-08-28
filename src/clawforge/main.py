@@ -5,14 +5,17 @@ import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from .config import get_settings
 from .api.routes import router
 from .api.auth import APIKeyAuthMiddleware
 from .api.ratelimit import RateLimitMiddleware
 from .events.bus import event_bus, Event
+from .sentinel.watcher import Sentinel
+from .errors import ClawforgeError
 
 
 @asynccontextmanager
@@ -22,18 +25,40 @@ async def lifespan(app: FastAPI):
     print(f"[Clawforge] Wallet: {settings.CLAW_EARN_WALLET[:10]}...")
     print(f"[Clawforge] Memory path: {settings.MEMORY_PATH}")
 
-    for subdir in ["protocol", "memory/hot", "memory/warm", "memory/cold",
-                   "economy", "tasks", "audit", "credentials", "sentinel", "config",
-                   "settlement"]:
-        Path(settings.MEMORY_PATH).parent.mkdir(parents=True, exist_ok=True)
-        Path(f"./data/{subdir}").mkdir(parents=True, exist_ok=True)
+    # Initialize data directories using config paths
+    data_dirs = [
+        settings.get_protocol_path(),
+        settings.get_memory_path() / "hot",
+        settings.get_memory_path() / "warm",
+        settings.get_memory_path() / "cold",
+        settings.get_economy_path(),
+        settings.get_tasks_path(),
+        settings.get_audit_path(),
+        settings.get_credentials_path(),
+        settings.get_sentinel_path(),
+        settings.get_config_path(),
+        Path("./data/settlement"),
+    ]
+    for data_dir in data_dirs:
+        data_dir.mkdir(parents=True, exist_ok=True)
 
     print("[Clawforge] All directories initialized.")
+
+    # Start Sentinel watchdog
+    sentinel = Sentinel()
+    await sentinel.start()
+    app.state.sentinel = sentinel
+    print("[Clawforge] Sentinel watchdog started.")
+
     print("[Clawforge] Ready to accept tasks.")
 
     yield
 
+    # Stop Sentinel watchdog
     print("[Clawforge] Shutting down gracefully...")
+    if hasattr(app.state, "sentinel"):
+        await app.state.sentinel.stop()
+        print("[Clawforge] Sentinel watchdog stopped.")
 
 
 app = FastAPI(
@@ -50,17 +75,28 @@ app = FastAPI(
     openapi_url="/openapi.json",
 )
 
+
+# Exception handler for ClawforgeError
+@app.exception_handler(ClawforgeError)
+async def clawforge_error_handler(request: Request, exc: ClawforgeError):
+    """Handle ClawforgeError and return structured JSON response."""
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=exc.to_dict(),
+    )
+
+
 # CORS configuration
+settings = get_settings()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # Security middleware
-settings = get_settings()
 app.add_middleware(RateLimitMiddleware, max_requests=100, window_seconds=60)
 app.add_middleware(APIKeyAuthMiddleware, api_key=settings.API_KEY)
 

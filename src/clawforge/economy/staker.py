@@ -1,8 +1,10 @@
+import json
 import time
 from pathlib import Path
 
 from .ledger import USDCLedger
 from ..models import StakeRecord
+from ..utils.filelock import file_lock, locked_file
 
 
 class AutoStaker:
@@ -15,16 +17,16 @@ class AutoStaker:
 
     def _load(self):
         if self._stake_file.exists():
-            import json
-            data = json.loads(self._stake_file.read_text())
-            for tid, rec in data.items():
-                self._stakes[tid] = StakeRecord(**rec)
+            with locked_file(self._stake_file, "r") as f:
+                data = json.load(f)
+                for tid, rec in data.items():
+                    self._stakes[tid] = StakeRecord(**rec)
 
     def _save(self):
-        import json
-        temp = self._stake_file.with_suffix(".tmp")
-        temp.write_text(json.dumps({k: v.model_dump() for k, v in self._stakes.items()}, indent=2))
-        temp.replace(self._stake_file)
+        with file_lock(self._stake_file):
+            temp = self._stake_file.with_suffix(".tmp")
+            temp.write_text(json.dumps({k: v.model_dump() for k, v in self._stakes.items()}, indent=2))
+            temp.replace(self._stake_file)
 
     def stake_for_task(self, task_id: str, task_value: float) -> float:
         stake_amount = round(task_value * self.stake_pct, 6)

@@ -20,7 +20,7 @@ from clawforge.models import MemoryEntry
 class TestHotMemory:
     def _make_hot(self, tmpdir):
         mock_settings = type("Settings", (), {"get_memory_path": lambda self: Path(tmpdir) / "memory"})()
-        with patch("clawforge.memory.hot.get_settings", return_value=mock_settings):
+        with patch("clawforge.memory.base.get_settings", return_value=mock_settings):
             return HotMemory()
 
     def test_store_and_retrieve(self):
@@ -101,7 +101,7 @@ class TestHotMemory:
 class TestWarmMemory:
     def _make_warm(self, tmpdir):
         mock_settings = type("Settings", (), {"get_memory_path": lambda self: Path(tmpdir) / "memory"})()
-        with patch("clawforge.memory.warm.get_settings", return_value=mock_settings):
+        with patch("clawforge.memory.base.get_settings", return_value=mock_settings):
             return WarmMemory()
 
     def test_in_memory_operations(self):
@@ -206,7 +206,7 @@ class TestWarmMemory:
 class TestColdMemory:
     def _make_cold(self, tmpdir):
         mock_settings = type("Settings", (), {"get_memory_path": lambda self: Path(tmpdir) / "memory"})()
-        with patch("clawforge.memory.cold.get_settings", return_value=mock_settings):
+        with patch("clawforge.memory.base.get_settings", return_value=mock_settings):
             return ColdMemory()
 
     def test_in_memory_operations(self):

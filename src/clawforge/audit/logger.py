@@ -4,6 +4,7 @@ import time
 from pathlib import Path
 
 from ..models import AuditEntry
+from ..utils.filelock import file_lock, locked_file
 
 
 class HashChainLogger:
@@ -17,7 +18,7 @@ class HashChainLogger:
         if not self._log_file.exists():
             return "genesis"
         last_line = ""
-        with open(self._log_file, "r") as f:
+        with locked_file(self._log_file, "r") as f:
             for line in f:
                 if line.strip():
                     last_line = line.strip()
@@ -31,35 +32,36 @@ class HashChainLogger:
         return hashlib.sha256(content.encode()).hexdigest()
 
     def log(self, action: str, task_id: str = "", details: dict = None) -> AuditEntry:
-        entry = AuditEntry(
-            timestamp=time.time(),
-            action=action,
-            task_id=task_id,
-            details=details or {},
-            prev_hash=self._last_hash,
-        )
-        entry.hash = self._compute_hash(self._last_hash, entry.model_dump(exclude={"hash"}))
-        self._last_hash = entry.hash
+        with file_lock(self._log_file):
+            entry = AuditEntry(
+                timestamp=time.time(),
+                action=action,
+                task_id=task_id,
+                details=details or {},
+                prev_hash=self._last_hash,
+            )
+            entry.hash = self._compute_hash(self._last_hash, entry.model_dump(exclude={"hash"}))
+            self._last_hash = entry.hash
 
-        # Atomic write: read existing, append new, write all to temp, then replace
-        existing = ""
-        if self._log_file.exists():
-            existing = self._log_file.read_text()
+            # Atomic write: read existing, append new, write all to temp, then replace
+            existing = ""
+            if self._log_file.exists():
+                existing = self._log_file.read_text()
 
-        temp = self._log_file.with_suffix(".tmp")
-        with open(temp, "w") as f:
-            f.write(existing)
-            f.write(entry.model_dump_json() + "\n")
-        temp.replace(self._log_file)
+            temp = self._log_file.with_suffix(".tmp")
+            with open(temp, "w") as f:
+                f.write(existing)
+                f.write(entry.model_dump_json() + "\n")
+            temp.replace(self._log_file)
 
-        return entry
+            return entry
 
     def verify_chain(self) -> bool:
         """Verify hash chain integrity by recomputing hashes."""
         prev_hash = "genesis"
         if not self._log_file.exists():
             return True
-        with open(self._log_file, "r") as f:
+        with locked_file(self._log_file, "r") as f:
             for line in f:
                 if not line.strip():
                     continue
@@ -80,7 +82,7 @@ class HashChainLogger:
         entries = []
         if not self._log_file.exists():
             return entries
-        with open(self._log_file, "r") as f:
+        with locked_file(self._log_file, "r") as f:
             for line in f:
                 if not line.strip():
                     continue

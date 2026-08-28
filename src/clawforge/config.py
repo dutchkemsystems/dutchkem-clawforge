@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     # API Configuration
     CLAW_EARN_BASE_URL: str = "https://aiagentstore.ai"
 
+    # CORS Configuration
+    CORS_ORIGINS: list[str] = ["*"]  # Override in production
+
     # Storage Paths
     MEMORY_PATH: str = "./data/memory"
     AUDIT_PATH: str = "./data/audit"

@@ -9,6 +9,7 @@ class ReputationTracker:
         "bronze": {"min_ratings": 0, "min_avg": 0.0, "stake_pct": 0.30},
         "silver": {"min_ratings": 6, "min_avg": 3.0, "stake_pct": 0.25},
         "gold": {"min_ratings": 6, "min_avg": 4.0, "stake_pct": 0.20},
+        "platinum": {"min_ratings": 10, "min_avg": 4.2, "stake_pct": 0.15},
         "diamond": {"min_ratings": 12, "min_avg": 4.5, "stake_pct": 0.10},
     }
 
@@ -38,7 +39,7 @@ class ReputationTracker:
         return self.profile.tier
 
     def _compute_tier(self) -> str:
-        for tier_name in ["diamond", "gold", "silver", "bronze"]:
+        for tier_name in ["diamond", "platinum", "gold", "silver", "bronze"]:
             tier = self.TIERS[tier_name]
             if self.profile.total_ratings >= tier["min_ratings"] and self.profile.average_rating >= tier["min_avg"]:
                 return tier_name
