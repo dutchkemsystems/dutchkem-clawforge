@@ -2,10 +2,8 @@ FROM python:3.12-slim AS builder
 
 WORKDIR /app
 COPY pyproject.toml requirements.txt ./
-RUN pip install --no-cache-dir -e .
-
 COPY src/ src/
-COPY data/ data/
+RUN pip install --no-cache-dir -e .
 
 FROM python:3.12-slim AS runtime
 
