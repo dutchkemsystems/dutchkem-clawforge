@@ -165,6 +165,8 @@ class OnChainSettler:
 
 def create_settler() -> OnChainSettler:
     """Create an OnChainSettler from current settings."""
+    from ..config import get_settings
+
     settings = get_settings()
     return OnChainSettler(
         private_key=settings.CLAW_EARN_PRIVATE_KEY,

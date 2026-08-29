@@ -16,7 +16,7 @@ class SupplyDemandScanner:
         return available_tasks < 5
 
     def generate_study_tasks(self, count: int = 3) -> list[dict]:
-        entries = self.warm.get_frequent_entries(min_accesses=2, within_minutes=60)
+        entries = self.warm.get_frequent_entries(min_accesses=2, within_seconds=3600)
         tasks = []
         for i, entry in enumerate(entries[:count]):
             tasks.append({
