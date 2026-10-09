@@ -16,4 +16,5 @@ jobs:
           pip install pytest pytest-cov ruff
       - run: ruff check . || true
         continue-on-error: true
+        continue-on-error: true
       - run: [ -d tests ] && pytest tests/ -v --cov=. || echo "no tests yet"
