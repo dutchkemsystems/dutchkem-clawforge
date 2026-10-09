@@ -15,4 +15,5 @@ jobs:
           [ -f requirements.txt ] && pip install -r requirements.txt || true
           pip install pytest pytest-cov ruff
       - run: ruff check . || true
+        continue-on-error: true
       - run: [ -d tests ] && pytest tests/ -v --cov=. || echo "no tests yet"
