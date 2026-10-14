@@ -30,7 +30,7 @@ jobs:
 
       - name: Set up Node
         if: steps.detect.outputs.lang == 'node'
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: '20'
 
