@@ -2,42 +2,64 @@
 
 ## Threat Model
 
-Clawforge handles wallet signing, USDC settlement, and audit chaining. The following
-threats are in scope:
+Clawforge handles wallet signing, USDC settlement, and hash-chained audit logs.
+The following threats are in scope:
 
-- **Key compromise** — signing keys are stored encrypted at rest (AES-256-GCM) in
-  `src/clawforge/crypto/vault.py`. Access requires the vault passphrase from the
-  environment. Compromise of the passphrase or the host filesystem is out of scope.
-- **Transport interception** — all external calls assume HTTPS termination at the
-  trust boundary. Plaintext HTTP is not supported in production.
-- **Unauthorized signing** — the signer enforces least-privilege semantics. Only
-  approved transaction types are signed, and spend limits are enforced per account.
-- **Replay / tampering** — audit chains are hash-linked. Any break in the chain
-  invalidates downstream records.
-- **Malicious inputs** — all external inputs are validated via Pydantic models and
-  regex constraints before reaching business logic.
+### Assets under protection
+- **Wallet private key** (`CLAW_EARN_PRIVATE_KEY`) — used to sign on-chain transactions
+- **Vault master key** (`CLAW_VAULT_KEY`) — AES-256-GCM key encrypting the wallet private key at rest
+- **Audit chain integrity** — hash-linked records that must not be silently modified
+- **RPC and API credentials** — used to reach upstream services (aiagentstore.ai, RPC providers)
+
+### Trust boundaries
+- **Inbound HTTP**: FastAPI endpoints. All input is validated at the boundary with
+  Pydantic models and regex patterns (`_TASK_ID_PATTERN`, `_ADDRESS_PATTERN` in `api/routes.py`).
+- **Outbound HTTP**: aiagentstore.ai and configured RPC providers. All requests assume HTTPS
+  termination at the edge. Plaintext HTTP is not supported in production.
+- **Filesystem**: the vault file is encrypted at rest. Filesystem-level compromise of the
+  host is out of scope — the master key would also need to be obtained.
+
+### Attacker capabilities considered
+- Network attacker on the public internet (mitigated by HTTPS-only outbound)
+- Malicious API caller (mitigated by Pydantic validation + auth layer)
+- Compromised dependency (mitigated by `pip-audit` in CI)
+- Compromised CI runner (mitigated by no long-lived secrets in workflow files)
+
+### Out of scope
+- Compromise of the host OS by an attacker with root
+- Compromise of the environment variable store (see "Known Gaps")
+
+## Known Gaps and Recommended Production Practice
+
+The current implementation stores `CLAW_EARN_PRIVATE_KEY` and `CLAW_VAULT_KEY`
+as plain environment variables. This is acceptable for development and staging
+but **not recommended for production**.
+
+**Recommended production posture:**
+1. Store the vault master key in a dedicated secret manager (AWS Secrets Manager,
+   GCP Secret Manager, HashiCorp Vault, or Doppler).
+2. Rotate the vault master key on a documented schedule.
+3. Use short-lived RPC credentials where the provider supports it.
+4. Run the signer in a dedicated process with least-privilege filesystem access.
 
 ## Reporting a Vulnerability
 
-If you believe you have found a security issue, please email security@dutchkem.example
-with:
-
-1. A description of the issue
+Please email **security@dutchkem.example** with:
+1. A clear description of the issue
 2. Steps to reproduce
 3. Potential impact
 4. Any suggested mitigation
 
-Please do **not** open a public GitHub issue for security reports.
+**Do not open a public GitHub issue for security reports.**
 
-We aim to acknowledge reports within 72 hours and provide a remediation timeline
+We aim to acknowledge within 72 hours and provide a remediation timeline
 within 7 days.
 
 ## Supported Versions
 
-Only the latest release on `main` is supported with security updates.
+Only the latest release on `master` is supported with security updates.
 
 ## Disclosure
 
-We follow coordinated disclosure. Once a fix is released, we will publish an
-advisory describing the issue and credit the reporter (unless anonymity is
-requested).
+We follow coordinated disclosure. Once a fix ships, we publish an advisory
+crediting the reporter (unless anonymity is requested).
