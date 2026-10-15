@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from .api.auth import APIKeyAuthMiddleware
+from .observability import init_sentry
 from .api.ratelimit import RateLimitMiddleware
 from .api.routes import router
 from .config import get_settings
@@ -20,6 +21,7 @@ from .sentinel.watcher import Sentinel
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    init_sentry()
     settings = get_settings()
     print("[Clawforge] Starting up...")
     print(f"[Clawforge] Wallet: {settings.CLAW_EARN_WALLET[:10]}...")
