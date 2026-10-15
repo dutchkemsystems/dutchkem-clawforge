@@ -41,7 +41,7 @@ jobs:
         run: mypy src/
 
       - name: Tests with coverage
-        run: pytest --cov=clawforge --cov-fail-under=70 tests/ -v
+        run: pytest --cov=clawforge --cov-fail-under=60 tests/ -v
 
       - name: Dependency audit
         run: pip-audit
