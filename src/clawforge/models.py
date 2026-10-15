@@ -20,7 +20,7 @@ class TaskStatus(str, Enum):
     """Status of a task in the marketplace."""
 
     FUNDED = "funded"
-    BIDDEN = "bitten"
+    BIDDEN = "bidden"
     ACCEPTED = "accepted"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
