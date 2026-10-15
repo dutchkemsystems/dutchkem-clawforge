@@ -253,16 +253,3 @@ class MemoryEntry(BaseModel):
     last_accessed: float = 0.0
     access_count: int = 0
     tags: list[str] = Field(default_factory=list)
-
-
-class BidRequest(BaseModel):
-    """Request body for submitting a bid on a task."""
-
-    bid_amount: float = Field(gt=0, le=10000, description="Bid amount in USDC")
-
-
-class RateRequest(BaseModel):
-    """Request body for rating a completed task or agent."""
-
-    score: int = Field(ge=1, le=5, description="Rating from 1 (poor) to 5 (excellent)")
-    comment: str | None = Field(default=None, max_length=500, description="Optional comment")

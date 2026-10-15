@@ -95,7 +95,7 @@ class TestTasksEndpoints:
         assert resp.status_code == 404
 
     def test_bid_on_task(self, client):
-        resp = client.post("/v1/tasks/task-1/bid", json={"bid_amount": 50.0})
+        resp = client.post("/v1/tasks/task-1/bid", params={"bid_amount": 50.0})
         assert resp.status_code == 200
         data = resp.json()
         assert data["task_id"] == "task-1"
@@ -104,8 +104,8 @@ class TestTasksEndpoints:
         assert "stake_amount" in data
 
     def test_bid_negative_amount_fails(self, client):
-        resp = client.post("/v1/tasks/task-1/bid", json={"bid_amount": -10.0})
-        assert resp.status_code == 422
+        resp = client.post("/v1/tasks/task-1/bid", params={"bid_amount": -10.0})
+        assert resp.status_code == 400
 
     def test_submit_proof(self, client):
         resp = client.post("/v1/tasks/task-1/submit")
@@ -186,15 +186,15 @@ class TestReputationEndpoint:
         assert "total_ratings" in data
 
     def test_rate_task(self, client):
-        resp = client.post("/v1/reputation/rate", json={"task_id": "task-1", "rating": 4.5})
+        resp = client.post("/v1/reputation/rate", params={"task_id": "task-1", "rating": 4.5})
         assert resp.status_code == 200
         data = resp.json()
         assert data["rating"] == 4.5
         assert "new_tier" in data
 
     def test_rate_task_invalid_rating(self, client):
-        resp = client.post("/v1/reputation/rate", json={"task_id": "task-1", "rating": 6.0})
-        assert resp.status_code == 422
+        resp = client.post("/v1/reputation/rate", params={"task_id": "task-1", "rating": 6.0})
+        assert resp.status_code == 400
 
 
 class TestTrustEndpoints:
