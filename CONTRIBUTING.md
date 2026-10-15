@@ -34,3 +34,4 @@ This project uses [Conventional Commits](https://www.conventionalcommits.org/):
 Each commit that changes behavior should include the tests that prove it.
 Large mixed commits (refactor + feature + formatting) are discouraged — split
 them into focused commits per module.
+
