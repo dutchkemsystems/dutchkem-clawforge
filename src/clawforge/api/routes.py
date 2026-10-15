@@ -14,9 +14,8 @@ from ..errors import NotFoundError, ValidationError
 from ..events.bus import Event, event_bus
 from ..execution.executor import WorkExecutor
 from ..memory.hot import HotMemory
-from ..models import (
-    Task,
-)
+from ..models import ( BidRequest, RateRequest
+    Task)
 from ..protocol.trust import trust_boundary
 from ..sentinel.watcher import sentinel
 
@@ -103,12 +102,11 @@ async def get_task(task_id: str):
 
 
 @router.post("/tasks/{task_id}/bid")
-async def bid_on_task(task_id: str, bid_amount: float):
+async def bid_on_task(task_id: str, payload: BidRequest):
     """Submit a bid on a task."""
     if not _TASK_ID_PATTERN.match(task_id):
         raise ValidationError("Invalid task_id format", field="task_id")
-    if bid_amount <= 0 or bid_amount > 10000:
-        raise ValidationError("Bid amount must be between 0 and 10000 USDC", field="bid_amount")
+    bid_amount = payload.bid_amount
     rep = _get_reputation()
 
     staker = _get_staker()
@@ -230,11 +228,10 @@ async def get_reputation():
 
 
 @router.post("/reputation/rate")
-async def rate_task(task_id: str, rating: float):
+async def rate_task(payload: RateRequest):
     """Rate a completed task."""
-    if rating < 0 or rating > 5:
-        raise HTTPException(status_code=400, detail="Rating must be between 0 and 5")
-
+    task_id = payload.task_id
+    rating = payload.rating
     rep = _get_reputation()
     tier = rep.record_rating(rating)
     return {
@@ -289,8 +286,7 @@ async def execute_task(task_id: str):
         description="Execute task via API",
         value_usdc=0.0,
         type="general",
-        created_at=time.time(),
-    )
+        created_at=time.time())
     result = await executor.execute(task)
 
     # Log audit entry
@@ -308,8 +304,7 @@ async def execute_task(task_id: str):
             "success": result.success,
             "execution_time": result.execution_time,
             "agent_type": result.agent_type.value,
-        },
-    ))
+        }))
 
     return {
         "task_id": task_id,
@@ -349,8 +344,7 @@ async def submit_settlement(task_id: str, to_address: str, amount_usdc: float):
     await event_bus.publish(Event(
         type="settlement_submitted",
         task_id=task_id,
-        data={"to_address": to_address, "amount_usdc": amount_usdc},
-    ))
+        data={"to_address": to_address, "amount_usdc": amount_usdc}))
 
     return {
         "task_id": task_id,
@@ -402,8 +396,7 @@ async def full_task_lifecycle(task_id: str, bid_amount: float, to_address: str):
     await event_bus.publish(Event(
         type="task_bid",
         task_id=task_id,
-        data={"bid_amount": bid_amount, "stake": stake},
-    ))
+        data={"bid_amount": bid_amount, "stake": stake}))
 
     # 2. Execute
     executor = WorkExecutor(timeout=300.0)
@@ -413,15 +406,13 @@ async def full_task_lifecycle(task_id: str, bid_amount: float, to_address: str):
         description="Full lifecycle execution",
         value_usdc=bid_amount,
         type="general",
-        created_at=time.time(),
-    )
+        created_at=time.time())
     result = await executor.execute(task)
 
     await event_bus.publish(Event(
         type="task_completed",
         task_id=task_id,
-        data={"success": result.success, "output": result.output[:200]},
-    ))
+        data={"success": result.success, "output": result.output[:200]}))
 
     # 3. Settle
     from pathlib import Path
@@ -441,8 +432,7 @@ async def full_task_lifecycle(task_id: str, bid_amount: float, to_address: str):
     await event_bus.publish(Event(
         type="settlement_submitted",
         task_id=task_id,
-        data={"amount": bid_amount, "to": to_address},
-    ))
+        data={"amount": bid_amount, "to": to_address}))
 
     return {
         "task_id": task_id,
