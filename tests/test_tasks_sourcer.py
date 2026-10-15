@@ -1,6 +1,5 @@
 """Unit tests for the task sourcer module."""
 
-import pytest
 from clawforge.tasks import sourcer
 
 

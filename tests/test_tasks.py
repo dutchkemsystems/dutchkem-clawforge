@@ -106,7 +106,7 @@ class TestSmartBidder:
     def test_calculate_bid_bronze(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             bidder = self._make_bidder(tmpdir, stake_pct=0.30)
-            task = _make_task(value=100.0)
+            _make_task(value=100.0)
             # Source code bug: Decimal * float not supported in bidder.calculate_bid
             # Test validates the bidder interface exists and has correct method
             assert hasattr(bidder, "calculate_bid")
@@ -115,19 +115,19 @@ class TestSmartBidder:
     def test_calculate_bid_diamond(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             bidder = self._make_bidder(tmpdir, stake_pct=0.10)
-            task = _make_task(value=100.0)
+            _make_task(value=100.0)
             assert hasattr(bidder, "calculate_bid")
 
     def test_value_to_stake_ratio(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             bidder = self._make_bidder(tmpdir, stake_pct=0.10)
-            task = _make_task(value=100.0)
+            _make_task(value=100.0)
             assert hasattr(bidder, "value_to_stake_ratio")
 
     def test_value_to_stake_ratio_zero_stake(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             bidder = self._make_bidder(tmpdir, stake_pct=0.0)
-            task = _make_task(value=100.0)
+            _make_task(value=100.0)
             assert hasattr(bidder, "value_to_stake_ratio")
 
     def test_rank_tasks_order(self):
@@ -138,7 +138,7 @@ class TestSmartBidder:
     def test_calculate_bid_minimum_floor(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             bidder = self._make_bidder(tmpdir, stake_pct=0.50)
-            task = _make_task(value=100.0)
+            _make_task(value=100.0)
             assert hasattr(bidder, "calculate_bid")
 
     def test_bidder_stores_reputation(self):
